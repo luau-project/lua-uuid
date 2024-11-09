@@ -29,6 +29,35 @@ static LuaUuid *lua_uuid_check(lua_State *L, int index)
     return (LuaUuid *)ud;
 }
 
+// The following function
+// was copied from Lua 5.4
+// source code in order
+// to provide compatibility
+// to Lua 5.1 and Lua 5.2
+static void *lua_uuid_testudata(lua_State *L, int ud, const char *tname)
+{
+#if LUA_VERSION_NUM == 501 || LUA_VERSION_NUM == 502
+    void *p = lua_touserdata(L, ud);
+    if (p != NULL)
+    {
+        if (lua_getmetatable(L, ud))
+        {
+            luaL_getmetatable(L, tname);
+            if (!lua_rawequal(L, -1, -2))
+            {
+                p = NULL;
+            }
+
+            lua_pop(L, 2);
+            return p;
+        }
+    }
+    return NULL;
+#else
+    return luaL_testudata(L, ud, tname);
+#endif
+}
+
 static int lua_uuid_new(lua_State *L)
 {
     int res = 1;
@@ -153,8 +182,8 @@ static int lua_uuid_equal(lua_State *L)
     }
     else
     {
-        void *ud_left = luaL_testudata(L, 1, LUA_UUID_METATABLE);
-        void *ud_right = luaL_testudata(L, 2, LUA_UUID_METATABLE);
+        void *ud_left = lua_uuid_testudata(L, 1, LUA_UUID_METATABLE);
+        void *ud_right = lua_uuid_testudata(L, 2, LUA_UUID_METATABLE);
 
         if (ud_left != NULL && ud_right != NULL)
         {

@@ -1,5 +1,7 @@
 # lua-uuid
 
+[![CI](https://github.com/luau-project/lua-uuid/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+
 ## Overview
 
 **lua-uuid** is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
@@ -34,7 +36,7 @@ On Linux, ```lua-uuid``` depends on ```libuuid```:
 * On Debian-based distributions:
 
     ```bash
-    sudo apt install -y libuuid-dev
+    sudo apt install -y uuid-dev
     ```
 
 * On RedHat-based distributions:
