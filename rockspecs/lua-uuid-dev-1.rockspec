@@ -8,6 +8,14 @@ source = {
 description = {
     homepage = "https://github.com/luau-project/lua-uuid",
     summary = [[Lightweight, native GUID / UUID library for Lua]],
+    detailed = [=[
+lua-uuid is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
+
+* On Linux, it uses libuuid to generate UUIDs;
+* On Windows, it uses the WINAPI rpcrt4 library;
+* On MacOS / iOS, it uses the CoreFoundation framework.
+
+Visit the GitHub repository for more information.]=],
     license = "MIT"
 }
 
@@ -23,17 +31,12 @@ external_dependencies = {
             ["UUID"] = {
                 header = "uuid/uuid.h"
             }
-        },
-        cygwin = {
-            ["UUID"] = {
-                header = "uuid/uuid.h"
-            }
         }
     }
 }
 
 local function make_plat(plat)
-    if (plat == "linux" or plat == "cygwin") then
+    if (plat == "linux") then
         return {
             type = "builtin",
             modules = {
@@ -46,7 +49,7 @@ local function make_plat(plat)
                 }
             }
         }
-    elseif (plat == "win32" or plat == "mingw") then
+    elseif (plat == "win32" or plat == "mingw" or plat == "cygwin") then
         return {
             type = "builtin",
             modules = {

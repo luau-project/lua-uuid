@@ -48,7 +48,7 @@ jobs:
         run: |
           if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "main" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
           {
-            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec";
+            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-0.rockspec";
           }
           else
           {
@@ -129,15 +129,6 @@ jobs:
       LUA_INTERPRETER: /${{ matrix.MSYS2_CONFIG.sys }}/bin/${{ matrix.Lua.msys2_lua_interpreter }}
 
     steps:
-      
-      - name: Set environment variable to hold the rockspec name
-        run: |
-          if [[ "${{ github.repository }}" == "luau-project/lua-uuid" ]] && [[ "${{ github.ref_name }}" == "main" ]] && [[ "${{ github.ref }}" == "refs/tags/v${{ env.ROCKSPEC_VERSION }}" ]];
-          then
-            echo "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec" >> "${{ github.env }}";
-          else
-            echo "ROCKSPEC=${{ env.DEV_ROCKSPEC }}" >> "${{ github.env }}";
-          fi;
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -149,6 +140,15 @@ jobs:
             mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-cc
             mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-${{ matrix.Lua.msys2_pkg_name }}
             mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-lua-luarocks
+      
+      - name: Set environment variable to hold the rockspec name
+        run: |
+          if [[ "${{ github.repository }}" == "luau-project/lua-uuid" ]] && [[ "${{ github.ref_name }}" == "main" ]] && [[ "${{ github.ref }}" == "refs/tags/v${{ env.ROCKSPEC_VERSION }}" ]];
+          then
+            echo "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-0.rockspec" >> "${{ github.env }}";
+          else
+            echo "ROCKSPEC=${{ env.DEV_ROCKSPEC }}" >> "${{ github.env }}";
+          fi;
       
       - name: Configure LuaRocks
         run: |
@@ -181,3 +181,59 @@ jobs:
             ${{ env.LUA_INTERPRETER }} $sample;
           done;
   
+  upload-rockspec:
+    name: Upload rockspec
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'luau-project/lua-uuid' && github.ref_name == 'main' && startsWith(github.ref, 'refs/tags/') }}
+    needs:
+      - build
+      - msys2-build
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+
+      - name: Set environment variable to hold the rockspec name
+        run: |
+          if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "main" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
+          {
+            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-0.rockspec";
+          }
+          else
+          {
+            Add-Content "${{ github.env }}" "ROCKSPEC=${{ env.DEV_ROCKSPEC }}";
+          }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: lua-uuid
+
+      - name: Install libuuid-dev
+        run: sudo apt install -y uuid-dev
+
+      - name: Setup Lua
+        uses: luarocks/gh-actions-lua@v10
+      
+      - name: Setup LuaRocks
+        uses: luarocks/gh-actions-luarocks@v5
+
+      - name: Install dependencies
+        run: luarocks install dkjson
+        working-directory: lua-uuid
+      
+      - name: Upload rockspec to LuaRocks
+        working-directory: lua-uuid
+        env:
+          UPLOAD_KEY: ${{ secrets.LUAROCKS_APIKEY }}
+        run: |
+          $rockspec = Get-ChildItem . -Recurse -File |
+              Where-Object Name -EQ "${{ env.ROCKSPEC }}" |
+              Select-Object -ExpandProperty FullName -First 1;
+          
+          $color = (0x1b -as [char]) + "[36m";
+          Write-Host "Uploading rockspec: ${color}${rockspec}";
+          
+          luarocks upload $rockspec "--api-key=$env:UPLOAD_KEY" --skip-pack
