@@ -175,11 +175,7 @@ static int lua_uuid_to_string(lua_State *L)
 
 static int lua_uuid_equal(lua_State *L)
 {
-    if (lua_isnil(L, 1) && lua_isnil(L, 2))
-    {
-        lua_pushboolean(L, 1);
-    }
-    else if (lua_isnil(L, 1) || lua_isnil(L, 2))
+    if (lua_isnil(L, 1) || lua_isnil(L, 2))
     {
         lua_pushboolean(L, 0);
     }
@@ -190,8 +186,8 @@ static int lua_uuid_equal(lua_State *L)
 
         if (ud_left != NULL && ud_right != NULL)
         {
-            LuaUuid *left = lua_uuid_check(L, 1);
-            LuaUuid *right = lua_uuid_check(L, 2);
+            LuaUuid *left = (LuaUuid *)ud_left;
+            LuaUuid *right = (LuaUuid *)ud_right;
 
 #if defined(LUA_UUID_USE_WIN32)
             RPC_STATUS status;
