@@ -6,8 +6,8 @@
 
 **lua-uuid** is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
 
-* On Linux, it uses ```libuuid``` to generate UUIDs;
-* On Windows, it uses the WINAPI ```rpcrt4``` library.
+* On Linux and Cygwin, it uses ```libuuid``` to generate UUIDs;
+* On Windows, it uses the WINAPI ```rpcrt4``` library;
 * On MacOS / iOS, it uses the ```CoreFoundation``` framework.
 
 ## Table of Contents
@@ -18,13 +18,14 @@
     * [Parse GUIDs / UUIDs from string](#parse-guids--uuids-from-string)
     * [Compare GUIDs / UUIDs](#compare-guids--uuids)
     * [Verify GUIDs / UUIDs nullity](#verify-guids--uuids-nullity)
+* [Remarks](#remarks)
 * [Future works](#future-works)
 
 ## Installation
 
 > [!IMPORTANT]
 > 
-> On Linux, ```lua-uuid``` depends on ```libuuid```:
+> On Linux and Cygwin, ```lua-uuid``` depends on ```libuuid```:
 > 
 > * On Debian-based distributions:
 > 
@@ -37,6 +38,8 @@
 >     ```bash
 >     sudo dnf install libuuid-devel
 >     ```
+> 
+> * On Cygwin, install ```libuuid-devel```.
 
 Assuming that [LuaRocks](https://luarocks.org/) is properly installed and configured on your system, execute the following command:
 
@@ -140,6 +143,10 @@ local id3 = uuid.parse("00000000-0000-0000-0000-000000000000")
 -- prints true
 print(id3:isnil())
 ```
+
+## Remarks
+
+Note to Cygwin users: Ideally, Cygwin should be using the WINAPI part. However, since LuaRocks does not handle Cygwin as Windows by default, we opted to leave Cygwin as a Linux variant for now.
 
 ## Future works
 

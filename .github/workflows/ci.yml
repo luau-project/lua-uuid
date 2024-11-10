@@ -10,6 +10,10 @@ on:
       - "**.md"
       - "docs/**"
 
+env:
+  ROCKSPEC_VERSION: 0.0.1
+  DEV_ROCKSPEC: lua-uuid-dev-1.rockspec
+
 jobs:
   build:
     name: Build
@@ -40,6 +44,17 @@ jobs:
     
     steps:
 
+      - name: Set environment variable to hold the rockspec name
+        run: |
+          if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "main" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
+          {
+            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec";
+          }
+          else
+          {
+            Add-Content "${{ github.env }}" "ROCKSPEC=${{ env.DEV_ROCKSPEC }}";
+          }
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -65,7 +80,7 @@ jobs:
         working-directory: lua-uuid
         run: |
           $rockspec = Get-ChildItem . -Recurse -File |
-            Where-Object Name -EQ "lua-uuid-dev-1.rockspec" |
+            Where-Object Name -EQ "${{ env.ROCKSPEC }}" |
             Select-Object -ExpandProperty FullName -First 1;
           
           $color = (0x1b -as [char]) + "[36m";
@@ -115,6 +130,15 @@ jobs:
 
     steps:
       
+      - name: Set environment variable to hold the rockspec name
+        run: |
+          if [[ "${{ github.repository }}" == "luau-project/lua-uuid" ]] && [[ "${{ github.ref_name }}" == "main" ]] && [[ "${{ github.ref }}" == "refs/tags/v${{ env.ROCKSPEC_VERSION }}" ]];
+          then
+            echo "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec" >> "${{ github.env }}";
+          else
+            echo "ROCKSPEC=${{ env.DEV_ROCKSPEC }}" >> "${{ github.env }}";
+          fi;
+
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
@@ -142,8 +166,8 @@ jobs:
       - name: Build lua-uuid
         working-directory: lua-uuid
         run: |
-          rockspec=rockspecs/lua-uuid-dev-1.rockspec
-          echo -e "Building rockspec file: \e[36m${rockspec}\e[0m"
+          rockspec="rockspecs/${{ env.ROCKSPEC }}"
+          echo -e "Building rockspec: \e[36m${rockspec}\e[0m"
 
           luarocks make ${rockspec}
       
@@ -156,3 +180,4 @@ jobs:
 
             ${{ env.LUA_INTERPRETER }} $sample;
           done;
+  
