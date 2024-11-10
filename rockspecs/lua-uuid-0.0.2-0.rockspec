@@ -1,9 +1,9 @@
 package = "lua-uuid"
-version = "0.0.1-0"
+version = "0.0.2-0"
 
 source = {
     url = "git://github.com/luau-project/lua-uuid.git",
-    tag = "v0.0.1"
+    tag = "v0.0.2"
 }
 
 description = {
