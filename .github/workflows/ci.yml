@@ -81,3 +81,73 @@ jobs:
 
               lua "$_";
             };
+  
+  msys2-build:
+    name: MSYS2 Build
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    strategy:
+      matrix:
+        
+        MSYS2_CONFIG:
+          - { sys: mingw32, env: i686 }
+          - { sys: mingw64, env: x86_64 }
+          - { sys: ucrt64, env: ucrt-x86_64 }
+          - { sys: clang64, env: clang-x86_64 }
+        
+        Lua:
+          - { version: '5.4', msys2_pkg_name: 'lua', msys2_lua_interpreter: 'lua' }
+          - { version: '5.3', msys2_pkg_name: 'lua53', msys2_lua_interpreter: 'lua5.3' }
+          - { version: '5.1', msys2_pkg_name: 'lua51', msys2_lua_interpreter: 'lua5.1' }
+          - { version: '5.1', msys2_pkg_name: 'luajit', msys2_lua_interpreter: 'luajit' }
+      
+    env:
+      LUA_INTERPRETER: /${{ matrix.MSYS2_CONFIG.sys }}/bin/${{ matrix.Lua.msys2_lua_interpreter }}
+
+    steps:
+      
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.MSYS2_CONFIG.sys }}
+          install: |
+            base-devel
+            git
+            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-cc
+            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-${{ matrix.Lua.msys2_pkg_name }}
+            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-lua-luarocks
+      
+      - name: Configure LuaRocks
+        run: |
+          source /etc/makepkg_mingw.conf
+          echo "CC=/${{ matrix.MSYS2_CONFIG.sys }}/bin/${CC}" >> "${{ github.env }}"
+          echo "CFLAGS=${CFLAGS}" >> "${{ github.env }}"
+          luarocks config lua_version "${{ matrix.Lua.version }}"
+          luarocks config lua_dir "/${{ matrix.MSYS2_CONFIG.sys }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: lua-uuid
+      
+      - name: Build lua-uuid
+        working-directory: lua-uuid
+        run: |
+          rockspec=rockspecs/lua-uuid-dev-1.rockspec
+          echo -e "Building rockspec file: \e[36m${rockspec}\e[0m"
+
+          luarocks make ${rockspec}
+      
+      - name: Run samples
+        working-directory: lua-uuid
+        run: |
+          for sample in samples/*.lua;
+          do
+            echo -e "Running sample file: \e[36m${sample}\e[0m"
+
+            ${{ env.LUA_INTERPRETER }} $sample;
+          done;

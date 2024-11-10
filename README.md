@@ -25,9 +25,9 @@
 
 ## Installation
 
-> [!NOTE]
+> [!TIP]
 > 
-> ```luarocks``` is the preferred method to install ```lua-uuid```.
+> [LuaRocks](https://luarocks.org/) is the preferred method to install ```lua-uuid```.
 
 ### Linux
 
@@ -45,7 +45,7 @@ On Linux, ```lua-uuid``` depends on ```libuuid```:
     sudo dnf install libuuid-devel
     ```
 
-After ```libuuid``` installation, assuming that ```luarocks``` is properly installed and configured on your system, then execute the following command:
+After ```libuuid``` installation, assuming that ```luarocks``` is properly installed and configured on your system, execute the following command:
 
 ```bash
 luarocks install lua-uuid
@@ -53,7 +53,7 @@ luarocks install lua-uuid
 
 ### Windows
 
-Assuming that ```luarocks``` is installed on your system, then execute the following command:
+Assuming that ```luarocks``` is installed on your system, execute the following command:
 
 ```cmd
 luarocks install lua-uuid
@@ -61,7 +61,7 @@ luarocks install lua-uuid
 
 ### MacOS / iOS
 
-> [!NOTE]
+> [!IMPORTANT]
 > 
 > It is not implemented at the moment.
 

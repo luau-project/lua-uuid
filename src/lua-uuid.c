@@ -90,7 +90,7 @@ static int lua_uuid_parse(lua_State *L)
 
 #if defined(LUA_UUID_USE_WIN32)
     UUID data;
-    RPC_STATUS parse_status = UuidFromStringA(s, &data);
+    RPC_STATUS parse_status = UuidFromStringA((RPC_CSTR)s, &data);
 
     if (parse_status != RPC_S_OK)
     {
@@ -148,15 +148,18 @@ static int lua_uuid_to_string(lua_State *L)
     RPC_CSTR buffer = NULL;
     RPC_STATUS status = UuidToStringA(&(uuid->data), &buffer);
 
-    if (status == RPC_S_OK)
+    if (status != RPC_S_OK)
     {
-        lua_pushstring(L, buffer);
-    }
-    else
-    {
-        lua_pushnil(L);
+        if (buffer != NULL)
+        {
+            RpcStringFreeA(&buffer);
+        }
+
+        luaL_error(L, "Failed to convert to string");
     }
 
+    lua_pushstring(L, (const char *)buffer);
+    
     if (buffer != NULL)
     {
         RpcStringFreeA(&buffer);
