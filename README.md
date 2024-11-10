@@ -8,14 +8,11 @@
 
 * On Linux, it uses ```libuuid``` to generate UUIDs;
 * On Windows, it uses the WINAPI ```rpcrt4``` library.
-* *(Not implemented yet)* On MacOS / iOS, it uses the ```CoreFoundation``` library.
+* On MacOS / iOS, it uses the ```CoreFoundation``` framework.
 
 ## Table of Contents
 
 * [Installation](#installation)
-    * [Linux](#linux)
-    * [Windows](#windows)
-    * [MacOS / iOS](#macos--ios)
 * [Usage](#usage)
     * [Generate GUIDs / UUIDs](#generate-guids--uuids)
     * [Parse GUIDs / UUIDs from string](#parse-guids--uuids-from-string)
@@ -25,45 +22,27 @@
 
 ## Installation
 
-> [!TIP]
+> [!IMPORTANT]
 > 
-> [LuaRocks](https://luarocks.org/) is the preferred method to install ```lua-uuid```.
+> On Linux, ```lua-uuid``` depends on ```libuuid```:
+> 
+> * On Debian-based distributions:
+> 
+>     ```bash
+>     sudo apt install -y uuid-dev
+>     ```
+> 
+> * On RedHat-based distributions:
+> 
+>     ```bash
+>     sudo dnf install libuuid-devel
+>     ```
 
-### Linux
-
-On Linux, ```lua-uuid``` depends on ```libuuid```:
-
-* On Debian-based distributions:
-
-    ```bash
-    sudo apt install -y uuid-dev
-    ```
-
-* On RedHat-based distributions:
-
-    ```bash
-    sudo dnf install libuuid-devel
-    ```
-
-After ```libuuid``` installation, assuming that ```luarocks``` is properly installed and configured on your system, execute the following command:
+Assuming that [LuaRocks](https://luarocks.org/) is properly installed and configured on your system, execute the following command:
 
 ```bash
 luarocks install lua-uuid
 ```
-
-### Windows
-
-Assuming that ```luarocks``` is installed on your system, execute the following command:
-
-```cmd
-luarocks install lua-uuid
-```
-
-### MacOS / iOS
-
-> [!IMPORTANT]
-> 
-> It is not implemented at the moment.
 
 ## Usage
 

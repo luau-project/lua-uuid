@@ -1,0 +1,25 @@
+OBJ_EXTENSION = o
+LIB_EXTENSION = so
+CFLAGS_EXTRA = -DLUA_UUID_USE_APPLE
+LIBFLAG_EXTRA = -framework CoreFoundation
+
+LUA_DIR = /usr/local
+LUA_INCDIR = $(LUA_DIR)/include
+LUA_LIBDIR = $(LUA_DIR)/lib
+
+LUA_VERSION = 5.1
+INSTALL_PREFIX = /usr/local
+INSTALL_LIBDIR = $(INSTALL_PREFIX)/lib/lua/$(LUA_VERSION)
+
+all: src/lua-uuid.$(LIB_EXTENSION)
+
+src/lua-uuid.$(LIB_EXTENSION): src/lua-uuid.$(OBJ_EXTENSION)
+	$(CC) $(LIBFLAG_EXTRA) $(LIBFLAG) -o $@ -L$(LUA_LIBDIR) $<
+
+src/lua-uuid.$(OBJ_EXTENSION): src/lua-uuid.c
+	$(CC) -c $(CFLAGS_EXTRA) $(CFLAGS) -I$(LUA_INCDIR) $< -o $@
+
+install: src/lua-uuid.$(LIB_EXTENSION)
+	cp $< $(INSTALL_LIBDIR)
+
+.PHONY: all install

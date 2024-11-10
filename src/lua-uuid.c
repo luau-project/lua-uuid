@@ -4,6 +4,8 @@
 #include <rpc.h>
 #elif defined(LUA_UUID_USE_LIBUUID)
 #include <uuid/uuid.h>
+#elif defined(LUA_UUID_USE_APPLE)
+#include <CoreFoundation/CFUUID.h>
 #endif
 
 #include <string.h>
@@ -17,6 +19,8 @@ typedef struct tagLuaUuid
     UUID data;
 #elif defined(LUA_UUID_USE_LIBUUID)
     uuid_t data;
+#elif defined(LUA_UUID_USE_APPLE)
+    CFUUIDRef data;
 #endif
 } LuaUuid;
 
@@ -78,6 +82,13 @@ static int lua_uuid_new(lua_State *L)
         }
 #elif defined(LUA_UUID_USE_LIBUUID)
         uuid_generate(uuid->data);
+#elif defined(LUA_UUID_USE_APPLE)
+        uuid->data = CFUUIDCreate(NULL);
+
+        if (uuid->data == NULL)
+        {
+            luaL_error(L, "Failed to create UUID");
+        }
 #endif
     }
     return res;
@@ -85,8 +96,7 @@ static int lua_uuid_new(lua_State *L)
 
 static int lua_uuid_parse(lua_State *L)
 {
-    size_t size;
-    const char *s = luaL_checklstring(L, 1, &size);
+    const char *s = luaL_checkstring(L, 1);
 
 #if defined(LUA_UUID_USE_WIN32)
     UUID data;
@@ -106,6 +116,23 @@ static int lua_uuid_parse(lua_State *L)
         luaL_error(L, "Failed to parse UUID");
     }
 
+#elif defined(LUA_UUID_USE_APPLE)
+    CFStringRef strRef = CFStringCreateWithCString(NULL, s, kCFStringEncodingISOLatin1);
+
+    if (strRef == NULL)
+    {
+        luaL_error(L, "Failed to create string ref");
+    }
+
+    CFUUIDRef data = CFUUIDCreateFromString(NULL, strRef);
+
+    CFRelease(strRef);
+
+    if (data == NULL)
+    {
+        luaL_error(L, "Failed to parse UUID");
+    }
+
 #endif
 
     void *ud = lua_newuserdata(L, sizeof(LuaUuid));
@@ -118,6 +145,8 @@ static int lua_uuid_parse(lua_State *L)
         memcpy(&(uuid->data), &data, sizeof(data));
 #elif defined(LUA_UUID_USE_LIBUUID)
         memcpy(uuid->data, data, sizeof(data));
+#elif defined(LUA_UUID_USE_APPLE)
+        memcpy(&(uuid->data), &data, sizeof(CFUUIDRef));
 #endif
     }
 
@@ -134,6 +163,25 @@ static int lua_uuid_is_nil(lua_State *L)
     res = UuidIsNil(&(uuid->data), &status);
 #elif defined(LUA_UUID_USE_LIBUUID)
     res = uuid_is_null(uuid->data);
+#elif defined(LUA_UUID_USE_APPLE)
+    CFUUIDBytes uuid_bytes = CFUUIDGetUUIDBytes(uuid->data);
+    
+    res = uuid_bytes.byte0 == 0 &&
+        uuid_bytes.byte1 == 0 &&
+        uuid_bytes.byte2 == 0 &&
+        uuid_bytes.byte3 == 0 &&
+        uuid_bytes.byte4 == 0 &&
+        uuid_bytes.byte5 == 0 &&
+        uuid_bytes.byte6 == 0 &&
+        uuid_bytes.byte7 == 0 &&
+        uuid_bytes.byte8 == 0 &&
+        uuid_bytes.byte9 == 0 &&
+        uuid_bytes.byte10 == 0 &&
+        uuid_bytes.byte11 == 0 &&
+        uuid_bytes.byte12 == 0 &&
+        uuid_bytes.byte13 == 0 &&
+        uuid_bytes.byte14 == 0 &&
+        uuid_bytes.byte15 == 0;
 #endif
 
     lua_pushboolean(L, res);
@@ -168,6 +216,24 @@ static int lua_uuid_to_string(lua_State *L)
     char buffer[32];
     uuid_unparse(uuid->data, buffer);
     lua_pushstring(L, buffer);
+#elif defined(LUA_UUID_USE_APPLE)
+    CFStringRef strRef = CFUUIDCreateString(NULL, uuid->data);
+
+    if (strRef == NULL)
+    {
+        luaL_error(L, "Failed to create string from UUID");
+    }
+
+    const char *buffer = CFStringGetCStringPtr(strRef, kCFStringEncodingISOLatin1);
+    
+    if (buffer == NULL)
+    {
+        CFRelease(strRef);
+        luaL_error(L, "Failed to get C string pointer");
+    }
+
+    lua_pushstring(L, buffer);
+    CFRelease(strRef);
 #endif
 
     return 1;
@@ -193,9 +259,34 @@ static int lua_uuid_equal(lua_State *L)
             RPC_STATUS status;
             int is_equal = UuidEqual(&(left->data), &(right->data), &status);
             lua_pushboolean(L, is_equal);
+
 #elif defined(LUA_UUID_USE_LIBUUID)
             int comparison = uuid_compare(left->data, right->data);
             lua_pushboolean(L, comparison == 0);
+            
+#elif defined(LUA_UUID_USE_APPLE)
+
+            CFUUIDBytes uuid_bytes_left = CFUUIDGetUUIDBytes(left->data);
+            CFUUIDBytes uuid_bytes_right = CFUUIDGetUUIDBytes(right->data);
+            
+            int is_equal = uuid_bytes_left.byte0 == uuid_bytes_right.byte0 &&
+                uuid_bytes_left.byte1 == uuid_bytes_right.byte1 &&
+                uuid_bytes_left.byte2 == uuid_bytes_right.byte2 &&
+                uuid_bytes_left.byte3 == uuid_bytes_right.byte3 &&
+                uuid_bytes_left.byte4 == uuid_bytes_right.byte4 &&
+                uuid_bytes_left.byte5 == uuid_bytes_right.byte5 &&
+                uuid_bytes_left.byte6 == uuid_bytes_right.byte6 &&
+                uuid_bytes_left.byte7 == uuid_bytes_right.byte7 &&
+                uuid_bytes_left.byte8 == uuid_bytes_right.byte8 &&
+                uuid_bytes_left.byte9 == uuid_bytes_right.byte9 &&
+                uuid_bytes_left.byte10 == uuid_bytes_right.byte10 &&
+                uuid_bytes_left.byte11 == uuid_bytes_right.byte11 &&
+                uuid_bytes_left.byte12 == uuid_bytes_right.byte12 &&
+                uuid_bytes_left.byte13 == uuid_bytes_right.byte13 &&
+                uuid_bytes_left.byte14 == uuid_bytes_right.byte14 &&
+                uuid_bytes_left.byte15 == uuid_bytes_right.byte15;
+
+            lua_pushboolean(L, is_equal);
 #endif
         }
         else
@@ -205,6 +296,19 @@ static int lua_uuid_equal(lua_State *L)
     }
 
     return 1;
+}
+
+static int lua_uuid_gc(lua_State *L)
+{
+#if defined(LUA_UUID_USE_WIN32)
+    // do nothing
+#elif defined(LUA_UUID_USE_LIBUUID)
+    // do nothing
+#elif defined(LUA_UUID_USE_APPLE)
+    LuaUuid *uuid = lua_uuid_check(L, 1);
+    CFRelease(uuid->data);
+#endif
+    return 0;
 }
 
 static int lua_uuid_newindex(lua_State *L)
@@ -223,6 +327,7 @@ static const luaL_Reg lua_uuid_member_functions[] = {
     {"isnil", lua_uuid_is_nil },
     {"__tostring", lua_uuid_to_string },
     {"__eq", lua_uuid_equal },
+    {"__gc", lua_uuid_gc },
     { NULL, NULL }
 };
 

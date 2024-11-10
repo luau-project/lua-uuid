@@ -11,7 +11,7 @@ description = {
     license = "MIT"
 }
 
-supported_platforms = { "linux", "win32", "mingw" }
+supported_platforms = { "linux", "win32", "mingw", "cygwin", "macosx" }
 
 dependencies = {
     "lua >= 5.1"
@@ -28,9 +28,21 @@ external_dependencies = {
 }
 
 build = {
-    type = "builtin",
     platforms = {
+        linux = {
+            type = "builtin",
+            modules = {
+                ["lua-uuid"] = {
+                    sources = { "src/lua-uuid.c" },
+                    libraries = { "uuid" },
+                    defines = { "LUA_UUID_BUILD_SHARED", "LUA_UUID_USE_LIBUUID" },
+                    incdirs = { "src", "$(UUID_INCDIR)" },
+                    libdirs = { "$(UUID_LIBDIR)" }
+                }
+            }
+        },
         win32 = {
+            type = "builtin",
             modules = {
                 ["lua-uuid"] = {
                     sources = { "src/lua-uuid.c" },
@@ -42,6 +54,7 @@ build = {
             }
         },
         mingw = {
+            type = "builtin",
             modules = {
                 ["lua-uuid"] = {
                     sources = { "src/lua-uuid.c" },
@@ -52,15 +65,36 @@ build = {
                 }
             }
         },
-        linux = {
+        cygwin = {
+            type = "builtin",
             modules = {
                 ["lua-uuid"] = {
                     sources = { "src/lua-uuid.c" },
-                    libraries = { "uuid" },
-                    defines = { "LUA_UUID_BUILD_SHARED", "LUA_UUID_USE_LIBUUID" },
-                    incdirs = { "src", "$(UUID_INCDIR)" },
-                    libdirs = { "$(UUID_LIBDIR)" }
+                    libraries = { "rpcrt4" },
+                    defines = { "LUA_UUID_BUILD_SHARED", "LUA_UUID_USE_WIN32" },
+                    incdirs = { "src" },
+                    libdirs = {}
                 }
+            }
+        },
+        macosx = {
+            type = "make",
+            makefile = "Makefile.macosx",
+            build_variables = {
+                CFLAGS = "$(CFLAGS)",
+                LIBFLAG = "$(LIBFLAG)",
+                CFLAGS_EXTRA = "-DLUA_UUID_USE_APPLE",
+                LIBFLAG_EXTRA = "-framework CoreFoundation",
+                LUA_INCDIR = "$(LUA_INCDIR)",
+                LUA_LIBDIR = "$(LUA_INCDIR)/../lib",
+                OBJ_EXTENSION = "$(OBJ_EXTENSION)",
+                LIB_EXTENSION = "$(LIB_EXTENSION)"
+            },
+            install_variables = {
+                INSTALL_PREFIX = "$(PREFIX)",
+                INSTALL_LIBDIR = "$(LIBDIR)",
+                LUA_VERSION = "$(LUA_VERSION)",
+                LIB_EXTENSION = "$(LIB_EXTENSION)"
             }
         }
     }

@@ -32,6 +32,11 @@ jobs:
         os:
           - windows-latest
           - ubuntu-latest
+          - macos-latest
+        
+        exclude:
+          - os: macos-latest
+            lua-version: luajit-master
     
     steps:
 
