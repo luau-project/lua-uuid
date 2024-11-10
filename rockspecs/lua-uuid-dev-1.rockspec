@@ -23,13 +23,18 @@ external_dependencies = {
             ["UUID"] = {
                 header = "uuid/uuid.h"
             }
+        },
+        cygwin = {
+            ["UUID"] = {
+                header = "uuid/uuid.h"
+            }
         }
     }
 }
 
-build = {
-    platforms = {
-        linux = {
+local function make_plat(plat)
+    if (plat == "linux" or plat == "cygwin") then
+        return {
             type = "builtin",
             modules = {
                 ["lua-uuid"] = {
@@ -40,8 +45,9 @@ build = {
                     libdirs = { "$(UUID_LIBDIR)" }
                 }
             }
-        },
-        win32 = {
+        }
+    elseif (plat == "win32" or plat == "mingw") then
+        return {
             type = "builtin",
             modules = {
                 ["lua-uuid"] = {
@@ -52,32 +58,9 @@ build = {
                     libdirs = {}
                 }
             }
-        },
-        mingw = {
-            type = "builtin",
-            modules = {
-                ["lua-uuid"] = {
-                    sources = { "src/lua-uuid.c" },
-                    libraries = { "rpcrt4" },
-                    defines = { "LUA_UUID_BUILD_SHARED", "LUA_UUID_USE_WIN32" },
-                    incdirs = { "src" },
-                    libdirs = {}
-                }
-            }
-        },
-        cygwin = {
-            type = "builtin",
-            modules = {
-                ["lua-uuid"] = {
-                    sources = { "src/lua-uuid.c" },
-                    libraries = { "rpcrt4" },
-                    defines = { "LUA_UUID_BUILD_SHARED", "LUA_UUID_USE_WIN32" },
-                    incdirs = { "src" },
-                    libdirs = {}
-                }
-            }
-        },
-        macosx = {
+        }
+    elseif (plat == "macosx") then
+        return {
             type = "make",
             makefile = "Makefile.macosx",
             build_variables = {
@@ -97,5 +80,17 @@ build = {
                 LIB_EXTENSION = "$(LIB_EXTENSION)"
             }
         }
+    else
+        error("Unknown platform", 2)
+    end
+end
+
+build = {
+    platforms = {
+        linux = make_plat("linux"),
+        win32 = make_plat("win32"),
+        mingw = make_plat("mingw"),
+        cygwin = make_plat("cygwin"),
+        macosx = make_plat("macosx")
     }
 }
