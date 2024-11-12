@@ -1,6 +1,6 @@
 # lua-uuid
 
-[![CI](https://github.com/luau-project/lua-uuid/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+[![CI](https://github.com/luau-project/lua-uuid/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml) [![LuaRocks](https://img.shields.io/luarocks/v/luau-project/lua-uuid?label=LuaRocks&color=2c3e67)](https://luarocks.org/modules/luau-project/lua-uuid)
 
 ## Overview
 
@@ -18,6 +18,15 @@
     * [Parse GUIDs / UUIDs from string](#parse-guids--uuids-from-string)
     * [Compare GUIDs / UUIDs](#compare-guids--uuids)
     * [Verify GUIDs / UUIDs nullity](#verify-guids--uuids-nullity)
+* [Static Methods](#static-methods)
+    * [new](#new)
+    * [parse](#parse)
+* [Instance Methods](#instance-methods)
+    * [isnil](#isnil)
+* [Metamethods](#metamethods)
+    * [__eq](#__eq)
+    * [__tostring](#__tostring)
+* [Change log](#change-log)
 * [Future works](#future-works)
 
 ## Installation
@@ -79,6 +88,10 @@ luarocks install lua-uuid
 
     assert(type(s1) == 'string')
     assert(type(s2) == 'string')
+
+    -- print each string
+    print(s1)
+    print(s2)
     ```
 
 ### Parse GUIDs / UUIDs from string
@@ -140,6 +153,69 @@ local id3 = uuid.parse("00000000-0000-0000-0000-000000000000")
 -- prints true
 print(id3:isnil())
 ```
+
+## Static Methods
+
+### new
+
+* *Description*: Generates a new GUID / UUID
+* *Signature*: ```new()```
+    * *return*: ```(userdata)```
+* *Usage*: See [here](#generate-guids--uuids)
+
+### parse
+
+* *Description*: Generates a new GUID / UUID from a string value
+* *Signature*: ```parse(value)```
+    * *value* (string): the string to be parsed
+    * *return*: ```(userdata)```
+* *Usage*: See [here](#parse-guids--uuids-from-string)
+
+## Instance Methods
+
+### isnil
+
+* *Description*: Verifies whether the GUID / UUID is considered null or not.
+
+> [!NOTE]
+> 
+> a GUID / UUID is considered null when its string representation is equal to ```00000000-0000-0000-0000-000000000000```.
+
+* *Signature*: ```instance:isnil()```
+    * *instance* (userdata): the GUID / UUID instance to check for nullity
+    * *return*: ```(boolean)```
+* *Usage*: See [here](#verify-guids--uuids-nullity)
+
+## Metamethods
+
+### __eq
+
+* *Description*: Compares two GUIDs / UUIDs for equality
+* *Signature*: ```left == right```
+    * *left* (any): the left-side element
+    * *right* (any): the right-side element
+    * *return*: ```(boolean)```
+* *Usage*: See [here](#compare-guids--uuids)
+
+### __tostring
+
+* *Description*: Converts the GUID / UUID to string
+* *Signature*: ```tostring(value)```
+    * *value* (userdata): the GUID / UUID to perform the conversion
+    * *return*: ```(string)```
+* *Usage*: See [here](#generate-guids--uuids)
+
+## Change log
+
+* v0.0.3:
+    * Changed to throw issue when ```lua_newuserdata``` returns ```NULL```;
+    * Added macro ```LUA_UUID_BUILD_SHARED``` to ```CFLAGS_EXTRA``` on macos;
+    * Changed ```luajit-master``` to ```luajit``` on CI when testing for ```LuaJIT```;
+    * Added print statements on [tostring.lua](./samples/tostring.lua) sample;
+    * Removed build / testing from CI for x86 packages on MSYS2;
+    * Added documentation for static, instance and metamethods to the README.
+* v0.0.2:
+    * Fixed syntax issue in the rockspec lua-uuid-0.0.1-0.rockspec
 
 ## Future works
 

@@ -64,34 +64,35 @@ static void *lua_uuid_testudata(lua_State *L, int ud, const char *tname)
 
 static int lua_uuid_new(lua_State *L)
 {
-    int res = 1;
-
     void *ud = lua_newuserdata(L, sizeof(LuaUuid));
-    if (ud != NULL)
+    if (ud == NULL)
     {
-        luaL_getmetatable(L, LUA_UUID_METATABLE);
-        lua_setmetatable(L, -2);
-        LuaUuid *uuid = (LuaUuid *)ud;
+        luaL_error(L, "Failed to create userdata");
+    }
+
+    luaL_getmetatable(L, LUA_UUID_METATABLE);
+    lua_setmetatable(L, -2);
+    LuaUuid *uuid = (LuaUuid *)ud;
 
 #if defined(LUA_UUID_USE_WIN32)
-        RPC_STATUS create_status = UuidCreate(&(uuid->data));
-        
-        if (create_status != RPC_S_OK)
-        {
-            luaL_error(L, "Failed to create UUID");
-        }
-#elif defined(LUA_UUID_USE_LIBUUID)
-        uuid_generate(uuid->data);
-#elif defined(LUA_UUID_USE_APPLE)
-        uuid->data = CFUUIDCreate(NULL);
-
-        if (uuid->data == NULL)
-        {
-            luaL_error(L, "Failed to create UUID");
-        }
-#endif
+    RPC_STATUS create_status = UuidCreate(&(uuid->data));
+    
+    if (create_status != RPC_S_OK)
+    {
+        luaL_error(L, "Failed to create UUID");
     }
-    return res;
+#elif defined(LUA_UUID_USE_LIBUUID)
+    uuid_generate(uuid->data);
+#elif defined(LUA_UUID_USE_APPLE)
+    uuid->data = CFUUIDCreate(NULL);
+
+    if (uuid->data == NULL)
+    {
+        luaL_error(L, "Failed to create UUID");
+    }
+#endif
+
+    return 1;
 }
 
 static int lua_uuid_parse(lua_State *L)
@@ -136,19 +137,29 @@ static int lua_uuid_parse(lua_State *L)
 #endif
 
     void *ud = lua_newuserdata(L, sizeof(LuaUuid));
-    if (ud != NULL)
+    if (ud == NULL)
     {
-        luaL_getmetatable(L, LUA_UUID_METATABLE);
-        lua_setmetatable(L, -2);
-        LuaUuid *uuid = (LuaUuid *)ud;
 #if defined(LUA_UUID_USE_WIN32)
-        memcpy(&(uuid->data), &data, sizeof(data));
+        // do nothing
 #elif defined(LUA_UUID_USE_LIBUUID)
-        memcpy(uuid->data, data, sizeof(data));
+        // do nothing
 #elif defined(LUA_UUID_USE_APPLE)
-        memcpy(&(uuid->data), &data, sizeof(CFUUIDRef));
+        CFRelease(data);
 #endif
+
+        luaL_error(L, "Failed to create userdata");
     }
+    
+    luaL_getmetatable(L, LUA_UUID_METATABLE);
+    lua_setmetatable(L, -2);
+    LuaUuid *uuid = (LuaUuid *)ud;
+#if defined(LUA_UUID_USE_WIN32)
+    memcpy(&(uuid->data), &data, sizeof(UUID));
+#elif defined(LUA_UUID_USE_LIBUUID)
+    memcpy(uuid->data, data, sizeof(uuid_t));
+#elif defined(LUA_UUID_USE_APPLE)
+    memcpy(&(uuid->data), &data, sizeof(CFUUIDRef));
+#endif
 
     return 1;
 }

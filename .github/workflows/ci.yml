@@ -11,7 +11,7 @@ on:
       - "docs/**"
 
 env:
-  ROCKSPEC_VERSION: 0.0.2
+  ROCKSPEC_VERSION: 0.0.3
   DEV_ROCKSPEC: lua-uuid-dev-1.rockspec
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
           - 5.2
           - 5.3
           - 5.4
-          - luajit-master
+          - luajit
 
         os:
           - windows-latest
@@ -40,7 +40,7 @@ jobs:
         
         exclude:
           - os: macos-latest
-            lua-version: luajit-master
+            lua-version: luajit
     
     steps:
 
@@ -65,7 +65,7 @@ jobs:
         run: sudo apt install -y uuid-dev
 
       - name: Setup MSVC dev-prompt
-        if: ${{ matrix.os == 'windows-latest' && matrix.lua-version != 'luajit-master' }}
+        if: ${{ matrix.os == 'windows-latest' && matrix.lua-version != 'luajit' }}
         uses: ilammy/msvc-dev-cmd@v1
       
       - name: Setup Lua
@@ -114,19 +114,18 @@ jobs:
       matrix:
         
         MSYS2_CONFIG:
-          - { sys: mingw32, env: i686 }
           - { sys: mingw64, env: x86_64 }
           - { sys: ucrt64, env: ucrt-x86_64 }
           - { sys: clang64, env: clang-x86_64 }
         
         Lua:
-          - { version: '5.4', msys2_pkg_name: 'lua', msys2_lua_interpreter: 'lua' }
-          - { version: '5.3', msys2_pkg_name: 'lua53', msys2_lua_interpreter: 'lua5.3' }
-          - { version: '5.1', msys2_pkg_name: 'lua51', msys2_lua_interpreter: 'lua5.1' }
-          - { version: '5.1', msys2_pkg_name: 'luajit', msys2_lua_interpreter: 'luajit' }
+          - { version: '5.4', msys2-pkg-name: 'lua', msys2-lua-interpreter: 'lua' }
+          - { version: '5.3', msys2-pkg-name: 'lua53', msys2-lua-interpreter: 'lua5.3' }
+          - { version: '5.1', msys2-pkg-name: 'lua51', msys2-lua-interpreter: 'lua5.1' }
+          - { version: '5.1', msys2-pkg-name: 'luajit', msys2-lua-interpreter: 'luajit' }
       
     env:
-      LUA_INTERPRETER: /${{ matrix.MSYS2_CONFIG.sys }}/bin/${{ matrix.Lua.msys2_lua_interpreter }}
+      LUA_INTERPRETER: /${{ matrix.MSYS2_CONFIG.sys }}/bin/${{ matrix.Lua.msys2-lua-interpreter }}
 
     steps:
 
@@ -138,7 +137,7 @@ jobs:
             base-devel
             git
             mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-cc
-            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-${{ matrix.Lua.msys2_pkg_name }}
+            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-${{ matrix.Lua.msys2-pkg-name }}
             mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-lua-luarocks
       
       - name: Set environment variable to hold the rockspec name
