@@ -1,9 +1,7 @@
 #ifndef LUA_UUID_H
 #define LUA_UUID_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <lua.h>
 
 #ifdef LUA_UUID_BUILD_STATIC
     #define LUA_UUID_EXPORT
@@ -31,7 +29,9 @@ extern "C" {
     #endif
 #endif
 
-#include <lua.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 LUA_UUID_EXPORT
 int luaopen_uuid(lua_State *L);

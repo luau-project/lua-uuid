@@ -11,7 +11,7 @@ on:
       - "docs/**"
 
 env:
-  ROCKSPEC_VERSION: 0.0.3
+  ROCKSPEC_VERSION: 0.0.4
   DEV_ROCKSPEC: lua-uuid-dev-1.rockspec
 
 jobs:

@@ -6,9 +6,9 @@
 
 **lua-uuid** is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
 
-* On Linux, it uses ```libuuid``` to generate UUIDs;
+* On Linux and BSD, it uses ```libuuid``` to generate UUIDs;
 * On Windows, it uses the WINAPI ```rpcrt4``` library;
-* On MacOS / iOS, it uses the ```CoreFoundation``` framework.
+* On macOS / iOS, it uses the ```CoreFoundation``` framework.
 
 ## Table of Contents
 
@@ -33,18 +33,24 @@
 
 > [!IMPORTANT]
 > 
-> On Linux, ```lua-uuid``` depends on ```libuuid```:
+> On Linux and BSD, ```lua-uuid``` depends on ```libuuid```:
 > 
-> * On Debian-based distributions:
+> * On Debian-based (e.g: Ubuntu) distributions:
 > 
 >     ```bash
 >     sudo apt install -y uuid-dev
 >     ```
 > 
-> * On RedHat-based distributions:
+> * On RedHat-based (e.g: Fedora) distributions:
 > 
 >     ```bash
 >     sudo dnf install libuuid-devel
+>     ```
+> 
+> * On BSD-based (e.g: FreeBSD) distributions:
+> 
+>     ```bash
+>     pkg install e2fsprogs-libuuid
 >     ```
 
 Assuming that [LuaRocks](https://luarocks.org/) is properly installed and configured on your system, execute the following command:
@@ -165,7 +171,7 @@ print(id3:isnil())
 
 ### parse
 
-* *Description*: Generates a new GUID / UUID from a string value
+* *Description*: Parses a GUID / UUID from a string value
 * *Signature*: ```parse(value)```
     * *value* (string): the string to be parsed
     * *return*: ```(userdata)```
@@ -207,8 +213,11 @@ print(id3:isnil())
 
 ## Change log
 
+* v0.0.4:
+    * Added support for BSD (e.g: FreeBSD, NetBSD, OpenBSD and DragonFly);
+    * Moved ```#include <lua.h>``` and ```LUA_UUID_EXPORT``` macro definition to outside of ```__cplusplus``` declarations on ```lua-uuid.h```.
 * v0.0.3:
-    * Changed to throw issue when ```lua_newuserdata``` returns ```NULL```;
+    * Changed to throw error when ```lua_newuserdata``` returns ```NULL```;
     * Added macro ```LUA_UUID_BUILD_SHARED``` to ```CFLAGS_EXTRA``` on macos;
     * Changed ```luajit-master``` to ```luajit``` on CI when testing for ```LuaJIT```;
     * Added print statements on [tostring.lua](./samples/tostring.lua) sample;
