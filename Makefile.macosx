@@ -5,7 +5,6 @@ LIBFLAG_EXTRA = -framework CoreFoundation
 
 LUA_DIR = /usr/local
 LUA_INCDIR = $(LUA_DIR)/include
-LUA_LIBDIR = $(LUA_DIR)/lib
 
 LUA_VERSION = 5.1
 INSTALL_PREFIX = /usr/local
@@ -14,7 +13,7 @@ INSTALL_LIBDIR = $(INSTALL_PREFIX)/lib/lua/$(LUA_VERSION)
 all: src/lua-uuid.$(LIB_EXTENSION)
 
 src/lua-uuid.$(LIB_EXTENSION): src/lua-uuid.$(OBJ_EXTENSION)
-	$(CC) $(LIBFLAG_EXTRA) $(LIBFLAG) -o $@ -L$(LUA_LIBDIR) $<
+	$(CC) $(LIBFLAG_EXTRA) $(LIBFLAG) -o $@ $<
 
 src/lua-uuid.$(OBJ_EXTENSION): src/lua-uuid.c
 	$(CC) -c $(CFLAGS_EXTRA) $(CFLAGS) -I$(LUA_INCDIR) $< -o $@

@@ -10,6 +10,10 @@
 * On Windows, it uses the WINAPI ```rpcrt4``` library;
 * On macOS / iOS, it uses the ```CoreFoundation``` framework.
 
+> [!NOTE]
+> 
+> ```lua-uuid``` is implemented in pure ANSI C, and also compiles as C++.
+
 ## Table of Contents
 
 * [Installation](#installation)
@@ -213,6 +217,13 @@ print(id3:isnil())
 
 ## Change log
 
+* v0.0.5:
+    * Adhering to C89;
+    * Added CI job to make sure that this library conforms to C89;
+    * Added another CI job to assert that this library builds fine as C++ code;
+    * Linting rockspecs on CI;
+    * Minor changes on the makefile for macOS / iOS;
+    * The naming format for the published rockspecs changed from ```vX.Y.Z-0``` to ```vX.Y.Z-1```.
 * v0.0.4:
     * Added support for BSD (e.g: FreeBSD, NetBSD, OpenBSD and DragonFly);
     * Moved ```#include <lua.h>``` and ```LUA_UUID_EXPORT``` macro definition to outside of ```__cplusplus``` declarations on ```lua-uuid.h```.

@@ -33,11 +33,13 @@ static LuaUuid *lua_uuid_check(lua_State *L, int index)
     return (LuaUuid *)ud;
 }
 
-// The following function
-// was copied from Lua 5.4
-// source code in order
-// to provide compatibility
-// to Lua 5.1 and Lua 5.2
+/*
+** The following function
+** was copied from Lua 5.4
+** source code in order
+** to provide compatibility
+** to Lua 5.1 and Lua 5.2
+*/
 static void *lua_uuid_testudata(lua_State *L, int ud, const char *tname)
 {
 #if LUA_VERSION_NUM == 501 || LUA_VERSION_NUM == 502
@@ -140,9 +142,9 @@ static int lua_uuid_parse(lua_State *L)
     if (ud == NULL)
     {
 #if defined(LUA_UUID_USE_WIN32)
-        // do nothing
+        /* do nothing */
 #elif defined(LUA_UUID_USE_LIBUUID)
-        // do nothing
+        /* do nothing */
 #elif defined(LUA_UUID_USE_APPLE)
         CFRelease(data);
 #endif
@@ -312,9 +314,9 @@ static int lua_uuid_equal(lua_State *L)
 static int lua_uuid_gc(lua_State *L)
 {
 #if defined(LUA_UUID_USE_WIN32)
-    // do nothing
+    /* do nothing */
 #elif defined(LUA_UUID_USE_LIBUUID)
-    // do nothing
+    /* do nothing */
 #elif defined(LUA_UUID_USE_APPLE)
     LuaUuid *uuid = lua_uuid_check(L, 1);
     CFRelease(uuid->data);
@@ -342,8 +344,7 @@ static const luaL_Reg lua_uuid_member_functions[] = {
     { NULL, NULL }
 };
 
-LUA_UUID_EXPORT
-int luaopen_uuid(lua_State *L)
+LUA_UUID_EXPORT int luaopen_uuid(lua_State *L)
 {
     lua_createtable(L, 0, 0);
 

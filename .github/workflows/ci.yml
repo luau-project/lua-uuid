@@ -11,10 +11,280 @@ on:
       - "docs/**"
 
 env:
-  ROCKSPEC_VERSION: 0.0.4
+  ROCKSPEC_VERSION: 0.0.5
   DEV_ROCKSPEC: lua-uuid-dev-1.rockspec
 
 jobs:
+  c89-build:
+    name: Build C89
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: pwsh
+    
+    strategy:
+      matrix:
+        
+        lua-version:
+          - 5.1.5
+          - 5.2.4
+          - 5.3.6
+          - 5.4.7
+      
+    steps:
+
+      - name: Validate Lua version, and set environment variables
+        run: |
+          if (-not ("${{ matrix.lua-version }}" -match "^(\d+)\.(\d+)(\.\d+)*$"))
+          {
+            Write-Host "Invalid Lua version (X.Y.Z) expected";
+            exit 1;
+          }
+
+          $lua_short_version = "${{ matrix.lua-version }}" -split "\." |
+            Select-Object -First 2 |
+            Join-String -Separator ".";
+
+          Add-Content "${{ github.env }}" "LUA_SHORT_VERSION=${lua_short_version}";
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: lua-uuid
+
+      - name: Install libuuid-dev
+        run: sudo apt install -y uuid-dev
+
+      - name: Download and extract Lua ${{ matrix.lua-version }} source code, and set environment variables
+        run: |
+          $targz = "lua-${{ matrix.lua-version }}.tar.gz";
+          $targz_path = Join-Path -Path "${{ runner.temp }}" -ChildPath $targz;
+
+          Invoke-WebRequest -Uri "https://lua.org/ftp/${targz}" -OutFile "$targz_path";
+          tar -C "${{ runner.temp }}" -xf "$targz_path";
+
+          $lua_source_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "lua-${{ matrix.lua-version }}";
+
+          if (-not (Test-Path $lua_source_dir))
+          {
+            $color = (0x1b -as [char]) + "[36m";
+
+            Write-Host "Unable to find Lua source code directory: ${color}${lua_source_dir}";
+
+            exit 1;
+          }
+
+          $install_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "installed-lua-${{ matrix.lua-version }}";
+          
+          Add-Content "${{ github.env }}" "LUA_SRC_DIR=${lua_source_dir}";
+          Add-Content "${{ github.env }}" "LUA_DIR=${install_dir}";
+      
+      - name: Set environment variables depending on Lua version for C89 make targets
+        run: |
+          $c89_target = "all";
+          $c89_src_dir = Join-Path -Path "${{ env.LUA_SRC_DIR }}" -ChildPath "src";
+          
+          if ("5.1", "5.2" -contains "${{ env.LUA_SHORT_VERSION }}")
+          {
+            $cc = "gcc";
+            $c89_cflags_name = "MYCFLAGS";
+            $c89_libs_name = "MYLIBS";
+            $c89_macro = "LUA_ANSI";
+          }
+          else
+          {
+            $cc = "gcc -std=c89";
+            $c89_cflags_name = "MYCFLAGS";
+            $c89_libs_name = "SYSLIBS";
+            $c89_macro = "LUA_USE_C89";
+          }
+          
+          Add-Content "${{ github.env }}" "CC=${cc}";
+          Add-Content "${{ github.env }}" "C89_SRC_DIR=${c89_src_dir}";
+          Add-Content "${{ github.env }}" "C89_CFLAGS_NAME=${c89_cflags_name}";
+          Add-Content "${{ github.env }}" "C89_LIBS_NAME=${c89_libs_name}";
+          Add-Content "${{ github.env }}" "C89_TARGET=${c89_target}";
+          Add-Content "${{ github.env }}" "C89_MACRO=${c89_macro}";
+      
+      - name: Build Lua ${{ matrix.lua-version }}
+        run: |
+          make -C "${{ env.C89_SRC_DIR }}" `
+            "${{ env.C89_TARGET }}" `
+            "${{ env.C89_CFLAGS_NAME }}=-D${{ env.C89_MACRO }} -DLUA_USE_DLOPEN" `
+            "${{ env.C89_LIBS_NAME }}=-Wl,-E -ldl" `
+            "CC=${{ env.CC }}";
+      
+      - name: Install Lua ${{ matrix.lua-version }}, and set environment variables
+        run: |
+          make -C "${{ env.LUA_SRC_DIR }}" `
+            install `
+            "INSTALL_TOP=${{ env.LUA_DIR }}";
+
+          $lua_bindir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "bin";
+          $lua_incdir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "include";
+
+          Add-Content "${{ github.path }}" "${lua_bindir}";
+          Add-Content "${{ github.env }}" "LUA_INCDIR=${lua_incdir}";
+      
+      - name: Compile lua-uuid
+        working-directory: lua-uuid
+        run: |
+          ${{ env.CC }} `
+            "-O2" `
+            "-Wall" `
+            "-c" `
+            "-fPIC" `
+            "-o" "src/lua-uuid.o" `
+            "-I${{ env.LUA_INCDIR }}" `
+            "-Isrc" `
+            "-I/usr/include/uuid" `
+            "-D${{ env.C89_MACRO }}" `
+            "-DLUA_USE_DLOPEN" `
+            "-DLUA_UUID_BUILD_SHARED" `
+            "-DLUA_UUID_USE_LIBUUID" `
+            "src/lua-uuid.c";
+ 
+      - name: Link lua-uuid
+        working-directory: lua-uuid
+        run: |
+          ${{ env.CC }} "-shared" `
+            "-o" "lua-uuid.so" `
+            "src/lua-uuid.o" `
+            "-ldl" `
+            "-luuid";
+ 
+      - name: Run samples
+        working-directory: lua-uuid
+        run: |
+          Get-ChildItem "samples" -Recurse -File |
+            Where-Object Extension -EQ ".lua" |
+            Select-Object -ExpandProperty FullName |
+            Foreach-Object {
+              $color = (0x1b -as [char]) + "[36m";
+
+              Write-Host "Running sample file: ${color}$_";
+
+              lua "$_";
+            };
+  
+  cplusplus-build:
+    name: Build C++
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: pwsh
+    
+    strategy:
+      matrix:
+        
+        lua-version:
+          - 5.1.5
+          - 5.2.4
+          - 5.3.6
+          - 5.4.7
+      
+    steps:
+
+      - name: Validate Lua version
+        run: |
+          if (-not ("${{ matrix.lua-version }}" -match "^(\d+)\.(\d+)(\.\d+)*$"))
+          {
+            Write-Host "Invalid Lua version (X.Y.Z) expected";
+            exit 1;
+          }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: lua-uuid
+
+      - name: Install dependencies
+        run: sudo apt install -y uuid-dev libreadline-dev
+
+      - name: Download and extract Lua ${{ matrix.lua-version }} source code, and set environment variables
+        run: |
+          $targz = "lua-${{ matrix.lua-version }}.tar.gz";
+          $targz_path = Join-Path -Path "${{ runner.temp }}" -ChildPath $targz;
+
+          Invoke-WebRequest -Uri "https://lua.org/ftp/${targz}" -OutFile "$targz_path";
+          tar -C "${{ runner.temp }}" -xf "$targz_path";
+
+          $lua_source_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "lua-${{ matrix.lua-version }}";
+
+          if (-not (Test-Path $lua_source_dir))
+          {
+            $color = (0x1b -as [char]) + "[36m";
+
+            Write-Host "Unable to find Lua source code directory: ${color}${lua_source_dir}";
+
+            exit 1;
+          }
+
+          $install_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "installed-lua-${{ matrix.lua-version }}";
+          
+          Add-Content "${{ github.env }}" "CC=g++";
+          Add-Content "${{ github.env }}" "LUA_SRC_DIR=${lua_source_dir}";
+          Add-Content "${{ github.env }}" "LUA_DIR=${install_dir}";
+      
+      - name: Build Lua ${{ matrix.lua-version }}
+        run: |
+          make -C "${{ env.LUA_SRC_DIR }}" `
+            linux `
+            "CC=${{ env.CC }}";
+      
+      - name: Install Lua ${{ matrix.lua-version }}, and set environment variables
+        run: |
+          make -C "${{ env.LUA_SRC_DIR }}" `
+            install `
+            "INSTALL_TOP=${{ env.LUA_DIR }}";
+
+          $lua_bindir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "bin";
+          $lua_incdir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "include";
+
+          Add-Content "${{ github.path }}" "${lua_bindir}";
+          Add-Content "${{ github.env }}" "LUA_INCDIR=${lua_incdir}";
+      
+      - name: Compile lua-uuid
+        working-directory: lua-uuid
+        run: |
+          ${{ env.CC }} `
+            "-O2" `
+            "-Wall" `
+            "-c" `
+            "-fPIC" `
+            "-o" "src/lua-uuid.o" `
+            "-I${{ env.LUA_INCDIR }}" `
+            "-Isrc" `
+            "-I/usr/include/uuid" `
+            "-DLUA_UUID_BUILD_SHARED" `
+            "-DLUA_UUID_USE_LIBUUID" `
+            "src/lua-uuid.c";
+ 
+      - name: Link lua-uuid
+        working-directory: lua-uuid
+        run: |
+          ${{ env.CC }} "-shared" `
+            "-o" "lua-uuid.so" `
+            "src/lua-uuid.o" `
+            "-ldl" `
+            "-luuid";
+ 
+      - name: Run samples
+        working-directory: lua-uuid
+        run: |
+          Get-ChildItem "samples" -Recurse -File |
+            Where-Object Extension -EQ ".lua" |
+            Select-Object -ExpandProperty FullName |
+            Foreach-Object {
+              $color = (0x1b -as [char]) + "[36m";
+
+              Write-Host "Running sample file: ${color}$_";
+
+              lua "$_";
+            };
+  
   build:
     name: Build
     runs-on: ${{ matrix.os }}
@@ -48,7 +318,7 @@ jobs:
         run: |
           if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "v${{ env.ROCKSPEC_VERSION }}" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
           {
-            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-0.rockspec";
+            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec";
           }
           else
           {
@@ -75,6 +345,20 @@ jobs:
       
       - name: Setup LuaRocks
         uses: luarocks/gh-actions-luarocks@v5
+      
+      - name: Lint rockspecs
+        working-directory: lua-uuid
+        run: |
+          Get-ChildItem . -Recurse -File |
+            Where-Object Extension -Eq ".rockspec" |
+            Select-Object -ExpandProperty FullName |
+            Foreach-Object {
+              $color = (0x1b -as [char]) + "[36m";
+
+              Write-Host "Linting rockspec: ${color}$_";
+
+              luarocks lint "$_";
+            }
 
       - name: Build lua-uuid
         working-directory: lua-uuid
@@ -144,7 +428,7 @@ jobs:
         run: |
           if [[ "${{ github.repository }}" == "luau-project/lua-uuid" ]] && [[ "${{ github.ref_name }}" == "v${{ env.ROCKSPEC_VERSION }}" ]] && [[ "${{ github.ref }}" == "refs/tags/v${{ env.ROCKSPEC_VERSION }}" ]];
           then
-            echo "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-0.rockspec" >> "${{ github.env }}";
+            echo "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec" >> "${{ github.env }}";
           else
             echo "ROCKSPEC=${{ env.DEV_ROCKSPEC }}" >> "${{ github.env }}";
           fi;
@@ -162,13 +446,22 @@ jobs:
         with:
           path: lua-uuid
       
+      - name: Lint rockspecs
+        working-directory: lua-uuid
+        run: |
+          for rockspec in rockspecs/*.rockspec;
+          do
+            echo -e "Linting rockspec: \e[36m${rockspec}\e[0m";
+            luarocks lint "${rockspec}";
+          done;
+  
       - name: Build lua-uuid
         working-directory: lua-uuid
         run: |
-          rockspec="rockspecs/${{ env.ROCKSPEC }}"
-          echo -e "Building rockspec: \e[36m${rockspec}\e[0m"
+          rockspec="rockspecs/${{ env.ROCKSPEC }}";
+          echo -e "Building rockspec: \e[36m${rockspec}\e[0m";
 
-          luarocks make ${rockspec}
+          luarocks make ${rockspec};
       
       - name: Run samples
         working-directory: lua-uuid
@@ -183,8 +476,10 @@ jobs:
   upload-rockspec:
     name: Upload rockspec
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'luau-project/lua-uuid' && startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.repository == 'luau-project/lua-uuid' && github.ref_type == 'tag' }}
     needs:
+      - c89-build
+      - cplusplus-build
       - build
       - msys2-build
 
@@ -198,7 +493,7 @@ jobs:
         run: |
           if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "v${{ env.ROCKSPEC_VERSION }}" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
           {
-            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-0.rockspec";
+            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec";
           }
           else
           {
@@ -210,20 +505,37 @@ jobs:
         with:
           path: lua-uuid
 
-      - name: Install libuuid-dev
-        run: sudo apt install -y uuid-dev libssl-dev
-
       - name: Setup Lua
         uses: luarocks/gh-actions-lua@v10
       
       - name: Setup LuaRocks
         uses: luarocks/gh-actions-luarocks@v5
 
-      - name: Install dependencies
+      - name: Make sure that tags from GitHub and rockspec are equal
         run: |
-          luarocks install dkjson
-          luarocks install luasocket
-          luarocks install luasec
+          $rockspec = Get-ChildItem . -Recurse -File |
+            Where-Object Name -EQ "${{ env.ROCKSPEC }}" |
+            Select-Object -ExpandProperty FullName -First 1;
+          
+          $rockspec_tag = lua -e "dofile(arg[0]); io.write(source.tag);" -- "${rockspec}";
+          $github_tag = "${{ github.ref_name }}";
+
+          if ("${rockspec_tag}" -ne "${github_tag}")
+          {
+            $color_msg = (0x1b -as [char]) + "[31m";
+            $color_reset = (0x1b -as [char]) + "[0m";
+            $color_tag = (0x1b -as [char]) + "[33m";
+
+            Write-Host "${color_msg}Tag mismatch${color_reset}: GitHub tag (${color_tag}${github_tag}${color_reset}) != rockspec tag (${color_tag}${rockspec_tag}${color_reset})";
+            exit 1;
+          }
+
+      - name: Install LuaRocks dependencies to upload
+        run: |
+          sudo apt install -y uuid-dev libssl-dev;
+          luarocks install dkjson;
+          luarocks install luasocket;
+          luarocks install luasec;
       
       - name: Upload rockspec to LuaRocks
         working-directory: lua-uuid
@@ -237,4 +549,4 @@ jobs:
           $color = (0x1b -as [char]) + "[36m";
           Write-Host "Uploading rockspec: ${color}${rockspec}";
           
-          luarocks upload $rockspec "--api-key=$env:UPLOAD_KEY" --skip-pack
+          luarocks upload $rockspec "--temp-key=$env:UPLOAD_KEY" --skip-pack
