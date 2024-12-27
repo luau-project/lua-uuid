@@ -24,6 +24,27 @@ typedef struct tagLuaUuid
 #endif
 } LuaUuid;
 
+/*
+** 
+** String buffer capacity
+** to hold a string representation
+** of the GUID / UUID.
+** 
+** Each character (16 chars) expands
+** to 2 bytes each (16 * 2)
+** + 4 hyphens
+** + 1 null-terminator.
+** 
+** As a safety measure, we double the number
+** to avoid any potential overflow.
+ */
+#define LUA_UUID_BUFFER_LEN ((16 * 2 + 4 + 1) * 2)
+
+/*
+** 
+** Metatable for GUID / UUID
+** 
+*/
 #define LUA_UUID_METATABLE "lua-uuid-metatable"
 
 static LuaUuid *lua_uuid_check(lua_State *L, int index)
@@ -226,7 +247,7 @@ static int lua_uuid_to_string(lua_State *L)
         RpcStringFreeA(&buffer);
     }
 #elif defined(LUA_UUID_USE_LIBUUID)
-    char buffer[32];
+    char buffer[LUA_UUID_BUFFER_LEN];
     uuid_unparse(uuid->data, buffer);
     lua_pushstring(L, buffer);
 #elif defined(LUA_UUID_USE_APPLE)

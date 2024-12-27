@@ -217,6 +217,10 @@ print(id3:isnil())
 
 ## Change log
 
+* v0.0.6:
+> [!IMPORTANT]
+> 
+> This is a bug-fix release that fixed a buffer overflow in the binding of ```libuuid```. Users running older versions must upgrade as soon as possible to avoid potential exploits.
 * v0.0.5:
     * Adhering to C89;
     * Added CI job to make sure that this library conforms to C89;

@@ -11,7 +11,7 @@ on:
       - "docs/**"
 
 env:
-  ROCKSPEC_VERSION: 0.0.5
+  ROCKSPEC_VERSION: 0.0.6
   DEV_ROCKSPEC: lua-uuid-dev-1.rockspec
 
 jobs:
@@ -166,6 +166,11 @@ jobs:
               Write-Host "Running sample file: ${color}$_";
 
               lua "$_";
+
+              if ($LASTEXITCODE -ne 0)
+              {
+                exit 1;
+              }
             };
   
   cplusplus-build:
@@ -184,6 +189,10 @@ jobs:
           - 5.2.4
           - 5.3.6
           - 5.4.7
+        
+        use-clang:
+          - 'true'
+          - 'false'
       
     steps:
 
@@ -202,6 +211,10 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt install -y uuid-dev libreadline-dev
+
+      - name: Install clang
+        if: ${{ matrix.use-clang == 'true' }}
+        run: sudo apt install -y clang
 
       - name: Download and extract Lua ${{ matrix.lua-version }} source code, and set environment variables
         run: |
@@ -224,7 +237,14 @@ jobs:
 
           $install_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "installed-lua-${{ matrix.lua-version }}";
           
-          Add-Content "${{ github.env }}" "CC=g++";
+          if ("${{ matrix.use-clang }}" -eq "true")
+          {
+            Add-Content "${{ github.env }}" "CC=clang++";
+          }
+          else
+          {
+            Add-Content "${{ github.env }}" "CC=g++";
+          }
           Add-Content "${{ github.env }}" "LUA_SRC_DIR=${lua_source_dir}";
           Add-Content "${{ github.env }}" "LUA_DIR=${install_dir}";
       
@@ -283,6 +303,133 @@ jobs:
               Write-Host "Running sample file: ${color}$_";
 
               lua "$_";
+
+              if ($LASTEXITCODE -ne 0)
+              {
+                exit 1;
+              }
+            };
+  
+  clang-build:
+    name: Clang Build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: pwsh
+    
+    strategy:
+      matrix:
+        
+        lua-version:
+          - 5.1.5
+          - 5.2.4
+          - 5.3.6
+          - 5.4.7
+      
+    steps:
+
+      - name: Validate Lua version
+        run: |
+          if (-not ("${{ matrix.lua-version }}" -match "^(\d+)\.(\d+)(\.\d+)*$"))
+          {
+            Write-Host "Invalid Lua version (X.Y.Z) expected";
+            exit 1;
+          }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: lua-uuid
+
+      - name: Install dependencies
+        run: sudo apt install -y uuid-dev libreadline-dev clang
+
+      - name: Download and extract Lua ${{ matrix.lua-version }} source code, and set environment variables
+        run: |
+          $targz = "lua-${{ matrix.lua-version }}.tar.gz";
+          $targz_path = Join-Path -Path "${{ runner.temp }}" -ChildPath $targz;
+
+          Invoke-WebRequest -Uri "https://lua.org/ftp/${targz}" -OutFile "$targz_path";
+          tar -C "${{ runner.temp }}" -xf "$targz_path";
+
+          $lua_source_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "lua-${{ matrix.lua-version }}";
+
+          if (-not (Test-Path $lua_source_dir))
+          {
+            $color = (0x1b -as [char]) + "[36m";
+
+            Write-Host "Unable to find Lua source code directory: ${color}${lua_source_dir}";
+
+            exit 1;
+          }
+
+          $install_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "installed-lua-${{ matrix.lua-version }}";
+          
+          Add-Content "${{ github.env }}" "CC=clang";
+          Add-Content "${{ github.env }}" "LUA_SRC_DIR=${lua_source_dir}";
+          Add-Content "${{ github.env }}" "LUA_DIR=${install_dir}";
+      
+      - name: Build Lua ${{ matrix.lua-version }}
+        run: |
+          make -C "${{ env.LUA_SRC_DIR }}" `
+            linux `
+            "CC=${{ env.CC }}";
+      
+      - name: Install Lua ${{ matrix.lua-version }}, and set environment variables
+        run: |
+          make -C "${{ env.LUA_SRC_DIR }}" `
+            install `
+            "INSTALL_TOP=${{ env.LUA_DIR }}";
+
+          $lua_bindir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "bin";
+          $lua_incdir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "include";
+
+          Add-Content "${{ github.path }}" "${lua_bindir}";
+          Add-Content "${{ github.env }}" "LUA_INCDIR=${lua_incdir}";
+      
+      - name: Compile lua-uuid
+        working-directory: lua-uuid
+        run: |
+          ${{ env.CC }} `
+            "-O2" `
+            "-Wall" `
+            "-c" `
+            "-fPIC" `
+            "-o" "src/lua-uuid.o" `
+            "-I${{ env.LUA_INCDIR }}" `
+            "-Isrc" `
+            "-I/usr/include/uuid" `
+            "-DLUA_UUID_BUILD_SHARED" `
+            "-DLUA_UUID_USE_LIBUUID" `
+            "src/lua-uuid.c";
+ 
+      - name: Link lua-uuid
+        working-directory: lua-uuid
+        run: |
+          ${{ env.CC }} "-shared" `
+            "-o" "lua-uuid.so" `
+            "src/lua-uuid.o" `
+            "-ldl" `
+            "-luuid";
+ 
+      - name: Run samples
+        working-directory: lua-uuid
+        run: |
+          Get-ChildItem "samples" -Recurse -File |
+            Where-Object Extension -EQ ".lua" |
+            Select-Object -ExpandProperty FullName |
+            Foreach-Object {
+              $color = (0x1b -as [char]) + "[36m";
+
+              Write-Host "Running sample file: ${color}$_";
+
+              lua "$_";
+
+              if ($LASTEXITCODE -ne 0)
+              {
+                exit 1;
+              }
             };
   
   build:
@@ -358,6 +505,11 @@ jobs:
               Write-Host "Linting rockspec: ${color}$_";
 
               luarocks lint "$_";
+
+              if ($LASTEXITCODE -ne 0)
+              {
+                exit 1;
+              }
             }
 
       - name: Build lua-uuid
@@ -384,6 +536,11 @@ jobs:
               Write-Host "Running sample file: ${color}$_";
 
               lua "$_";
+
+              if ($LASTEXITCODE -ne 0)
+              {
+                exit 1;
+              }
             };
   
   msys2-build:
@@ -480,6 +637,7 @@ jobs:
     needs:
       - c89-build
       - cplusplus-build
+      - clang-build
       - build
       - msys2-build
 
