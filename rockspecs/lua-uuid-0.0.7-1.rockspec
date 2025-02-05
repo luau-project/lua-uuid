@@ -34,7 +34,6 @@ external_dependencies = {
             }
         },
         windows = { },
-        cygwin = { },
         macos = { },
         macosx = { }
     }
@@ -54,7 +53,7 @@ local function build_plat(plat)
                 }
             }
         }
-    elseif (plat == "windows" or plat == "cygwin") then
+    elseif (plat == "windows") then
         return {
             type = "builtin",
             modules = {
@@ -96,7 +95,6 @@ build = {
     platforms = {
         unix = build_plat("unix"),
         windows = build_plat("windows"),
-        cygwin = build_plat("cygwin"),
         macos = build_plat("macos"),
         macosx = build_plat("macosx")
     }
