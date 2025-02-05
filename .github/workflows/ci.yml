@@ -11,7 +11,7 @@ on:
       - "docs/**"
 
 env:
-  ROCKSPEC_VERSION: 0.0.6
+  ROCKSPEC_VERSION: 0.0.7
   DEV_ROCKSPEC: lua-uuid-dev-1.rockspec
 
 jobs:
@@ -151,7 +151,6 @@ jobs:
           ${{ env.CC }} "-shared" `
             "-o" "lua-uuid.so" `
             "src/lua-uuid.o" `
-            "-ldl" `
             "-luuid";
  
       - name: Run samples
@@ -288,7 +287,6 @@ jobs:
           ${{ env.CC }} "-shared" `
             "-o" "lua-uuid.so" `
             "src/lua-uuid.o" `
-            "-ldl" `
             "-luuid";
  
       - name: Run samples
@@ -410,7 +408,6 @@ jobs:
           ${{ env.CC }} "-shared" `
             "-o" "lua-uuid.so" `
             "src/lua-uuid.o" `
-            "-ldl" `
             "-luuid";
  
       - name: Run samples
@@ -655,7 +652,10 @@ jobs:
           }
           else
           {
-            Add-Content "${{ github.env }}" "ROCKSPEC=${{ env.DEV_ROCKSPEC }}";
+            $color = (0x1b -as [char]) + "[31m";
+
+            Write-Host "${color}Invalid condition to upload rockspec";
+            exit 1;
           }
 
       - name: Checkout
