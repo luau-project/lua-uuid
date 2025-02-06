@@ -635,6 +635,7 @@ jobs:
       LUAROCKS_VERSION: 3.11.1
       CYGWIN_NOWINPATH: 1
       CHERE_INVOKING: 1
+      CYGWIN_INSTALL_DIR: C:\cygwin64
 
     steps:
       - name: Set environment variable to hold the rockspec name
@@ -660,7 +661,7 @@ jobs:
         uses: cygwin/cygwin-install-action@v5
         with:
           platform: x86_64
-          install-dir: C:\cygwin64
+          install-dir: ${{ env.CYGWIN_INSTALL_DIR }}
           packages: |
             coreutils,
             wget,
@@ -672,6 +673,16 @@ jobs:
             unzip,
             libuuid-devel
       
+      - name: Set environment variables to hold Cygwin applications for usage from pwsh
+        run: |
+          $bash = Join-Path -Path ${{ env.CYGWIN_INSTALL_DIR }} -ChildPath "bin" |
+            Join-Path -ChildPath "bash";
+          $cygpath = Join-Path -Path ${{ env.CYGWIN_INSTALL_DIR }} -ChildPath "bin" |
+            Join-Path -ChildPath "cygpath";
+          
+          Add-Content "${{ github.env }}" "CYGWIN_BASH=${bash}";
+          Add-Content "${{ github.env }}" "CYGWIN_CYGPATH=${cygpath}";
+
       - name: Create a patch to apply to LuaRocks tarball
         run: |
           $cygwin_patch = "diff -Naur a/GNUmakefile b/GNUmakefile",                                                             
@@ -724,30 +735,47 @@ jobs:
           
           Set-Content $patch_path $cygwin_patch_content -NoNewline;
           
-          $cygwinpath_for_patch = C:\cygwin64\bin\cygpath $patch_path;
+          $cygwinpath_for_patch = ${{ env.CYGWIN_CYGPATH }} $patch_path;
           Add-Content "${{ github.env }}" "CYGWIN_PATCH_FILENAME=${cygwinpath_for_patch}";
+          Add-Content "${{ github.env }}" "PWSH_CYGWIN_PATCH_FILENAME=${patch_path}";
 
       - name: Download, configure and install LuaRocks
         run: |
-          C:\cygwin64\bin\bash -lc "wget https://luarocks.org/releases/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz -P/tmp";
-          C:\cygwin64\bin\bash -lc "tar -C /tmp -xf /tmp/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz";
-          C:\cygwin64\bin\bash -lc "cd /tmp/luarocks-${{ env.LUAROCKS_VERSION }} && patch -Np1 -i ""${{ env.CYGWIN_PATCH_FILENAME }}""";
-          C:\cygwin64\bin\bash -lc "cd /tmp/luarocks-${{ env.LUAROCKS_VERSION }} && ./configure && make && make install";
+          $color = (0x1b -as [char]) + "[36m";
+
+          Write-Host "Downloading LuaRocks from ${color}https://luarocks.org/releases/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz";          
+          ${{ env.CYGWIN_BASH }} -lc "wget https://luarocks.org/releases/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz -P/tmp";
+
+          Write-Host "Extracting LuaRocks tarball: ${color}/tmp/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz";
+          ${{ env.CYGWIN_BASH }} -lc "tar -C /tmp -xf /tmp/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz";
+
+          Write-Host "Patching LuaRocks with ${color}${{ env.CYGWIN_PATCH_FILENAME }}";
+          Write-Host "    which has the following content:";
+
+          $color_patch_content = (0x1b -as [char]) + "[33m";
+          Get-Content "${{ env.PWSH_CYGWIN_PATCH_FILENAME }}" | ForEach-Object { Write-Host "${color_patch_content}$_"; }
+          ${{ env.CYGWIN_BASH }} -lc "cd /tmp/luarocks-${{ env.LUAROCKS_VERSION }} && patch -Np1 -i ""${{ env.CYGWIN_PATCH_FILENAME }}""";
+
+          Write-Host "Configuring, making and installing LuaRocks at ${color}/usr";
+          ${{ env.CYGWIN_BASH }} -lc "cd /tmp/luarocks-${{ env.LUAROCKS_VERSION }} && ./configure --prefix=/usr && make && make install";
+
+          Write-Host "Writing a shell entry loading LuaRocks variables to file: ${color}/etc/profile.d/luarocks.sh";
+          ${{ env.CYGWIN_BASH }} -lc "echo 'eval `$(luarocks path)' > /etc/profile.d/luarocks.sh";
       
       - name: Lint rockspecs
         working-directory: lua-uuid
         run: |
-          C:\cygwin64\bin\bash -lc "for rockspec in rockspecs/*.rockspec; do echo -e ""Linting rockspec: \e[36m`${rockspec}\e[0m""; luarocks lint ""`${rockspec}""; done";
+          ${{ env.CYGWIN_BASH }} -lc "for rockspec in rockspecs/*.rockspec; do echo -e ""Linting rockspec: \e[36m`${rockspec}\e[0m""; luarocks lint ""`${rockspec}""; done";
   
       - name: Build lua-uuid
         working-directory: lua-uuid
         run: |
-          C:\cygwin64\bin\bash -lc "rockspec=""rockspecs/${{ env.ROCKSPEC }}""; echo -e ""Building rockspec: \e[36m`${rockspec}\e[0m""; luarocks make `${rockspec};";
+          ${{ env.CYGWIN_BASH }} -lc "rockspec=""rockspecs/${{ env.ROCKSPEC }}""; echo -e ""Building rockspec: \e[36m`${rockspec}\e[0m""; luarocks make `${rockspec};";
 
       - name: Run samples
         working-directory: lua-uuid
         run: |
-          C:\cygwin64\bin\bash -lc "for sample in samples/*.lua; do echo -e ""Running sample file: \e[36m`${sample}\e[0m""; env lua `$sample; done;";
+          ${{ env.CYGWIN_BASH }} -lc "for sample in samples/*.lua; do echo -e ""Running sample file: \e[36m`${sample}\e[0m""; env lua `$sample; done;";
       
   upload-rockspec:
     name: Upload rockspec
