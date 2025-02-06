@@ -718,7 +718,7 @@ jobs:
           "";
 
           $cygwin_patch_content = $cygwin_patch |
-            Join-String -Separator ([System.Environment]::NewLine);
+            Join-String -Separator "`n";
 
           $patch_path = Join-Path -Path "${{ runner.temp }}" -ChildPath "cygwin-luarocks-3.11.1.patch";
           
