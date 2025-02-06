@@ -6,7 +6,7 @@
 
 **lua-uuid** is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
 
-* On Linux and BSD, it uses ```libuuid``` to generate UUIDs;
+* On Unix-like distributions, it uses ```libuuid``` to generate UUIDs;
 * On Windows, it uses the WINAPI ```rpcrt4``` library;
 * On macOS / iOS, it uses the ```CoreFoundation``` framework.
 
@@ -37,7 +37,7 @@
 
 > [!IMPORTANT]
 > 
-> On Linux and BSD, ```lua-uuid``` depends on ```libuuid```:
+> On Unix-like distributions, ```lua-uuid``` depends on ```libuuid```:
 > 
 > * On Debian-based (e.g: Ubuntu) distributions:
 > 
@@ -216,7 +216,10 @@ print(id3:isnil())
 * *Usage*: See [here](#generate-guids--uuids)
 
 ## Change log
-
+* v0.0.7:
+    * Allowed any Unix-like distribution to build and install ```lua-uuid```, depending on the system-provided development package for ```libuuid```;
+    * Added a CI job to build and test on Cygwin;
+    * Now, as a Unix-like distribution, Cygwin depends on the package ```libuuid-devel```.
 * v0.0.6:
 > [!IMPORTANT]
 > 
