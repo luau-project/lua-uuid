@@ -216,6 +216,8 @@ print(id3:isnil())
 * *Usage*: See [here](#generate-guids--uuids)
 
 ## Change log
+* v0.0.8:
+    * Moving back to the old mode listing platforms on ```build``` and ```external_dependencies``` tables for platform overrides. At the moment, platform overrides merge tables rather than selecting the appropriate value.
 * v0.0.7:
     * Allowed any Unix-like distribution to build and install ```lua-uuid```, depending on the system-provided development package for ```libuuid```;
     * Added a CI job to build and test on Cygwin;
