@@ -220,6 +220,7 @@ print("lua-uuid is version " .. uuid.version)
 * *Signature*: ```new()```
 * *Return*: ```(userdata)```
 * *Usage*: See [here](#generate-guids--uuids)
+* *Remark*: If the underlying library fails to generate GUID / UUID, this function throws an exception. Guard the call with `pcall` to detect failures.
 
 ### parse
 
@@ -228,6 +229,7 @@ print("lua-uuid is version " .. uuid.version)
     * *value* (string): the string to be parsed
 * *Return*: ```(userdata)```
 * *Usage*: See [here](#parse-guids--uuids-from-string)
+* *Remark*: If the underlying library fails to parse the GUID / UUID, this function throws an exception. Guard the call with `pcall` to detect failures.
 
 ### tryparse
 
@@ -235,8 +237,8 @@ print("lua-uuid is version " .. uuid.version)
 * *Signature*: ```tryparse(value)```
     * *value* (string): the string to be parsed
 * *Return*:
-        * *obj*: an ```userdata``` representing the GUID / UUID on success or `nil` on failure;
-        * *err*: `nil` on success or ```string``` containing a description of the error.
+    * *obj*: an ```userdata``` representing the GUID / UUID on success or `nil` on failure;
+    * *err*: `nil` on success or ```string``` containing a description of the error.
 * *Usage*: See [here](#try-to-parse-guids--uuids-from-string)
 
 ## Instance Methods
