@@ -1,0 +1,226 @@
+#=================================================================================#
+# LICENSE (MIT)                                                                   #
+#=================================================================================#
+#                                                                                 #
+# The MIT License (MIT)                                                           #
+#                                                                                 #
+# Copyright (c) 2024 - 2026 luau-project https://github.com/luau-project/lua-uuid #
+#                                                                                 #
+# Permission is hereby granted, free of charge, to any person obtaining a copy    #
+# of this software and associated documentation files (the "Software"), to deal   #
+# in the Software without restriction, including without limitation the rights    #
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell       #
+# copies of the Software, and to permit persons to whom the Software is           #
+# furnished to do so, subject to the following conditions:                        #
+#                                                                                 #
+# The above copyright notice and this permission notice shall be included in all  #
+# copies or substantial portions of the Software.                                 #
+#                                                                                 #
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR      #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,        #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE     #
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER          #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,   #
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE   #
+# SOFTWARE.                                                                       #
+#                                                                                 #
+#=================================================================================#
+
+__EMPTY =
+DIRSEP = /$(__EMPTY)
+OBJEXT = .o
+LIBEXT = .so
+OPENARGDELIMITER = "
+CLOSEARGDELIMITER = $(OPENARGDELIMITER)
+
+UUIDLIB = uuid
+PREFIX = $(DIRSEP)usr$(DIRSEP)local
+LUA = lua
+LUA_VERSION = 5.1
+LUA_INCDIR = $(PREFIX)$(DIRSEP)include
+INSTALL_CMOD = $(PREFIX)$(DIRSEP)lib$(DIRSEP)lua$(DIRSEP)$(LUA_VERSION)
+
+PACKAGE_NAME = lua-uuid
+PACKAGE_VERSION = 0.1.0
+PACKAGE_REVISION = 1
+PACKAGE_REPOSITORY_URL = https://github.com/luau-project/$(PACKAGE_NAME)
+PACKAGE_SOURCE_URL = git+$(PACKAGE_REPOSITORY_URL).git
+PACKAGE_DEV_BRANCH = main
+PACKAGE_HOMEPAGE_URL = $(PACKAGE_REPOSITORY_URL)
+ROCKSPEC_EXT = .rockspec
+ROCKSPEC_DIR = rockspecs
+ROCKSPEC_TEMPLATE = $(ROCKSPEC_DIR)$(DIRSEP)rockspec.in
+DEV_ROCKSPEC_VERSION = dev
+DEV_ROCKSPEC_REVISION = 1
+DEV_ROCKSPEC = $(ROCKSPEC_DIR)$(DIRSEP)$(PACKAGE_NAME)-$(DEV_ROCKSPEC_VERSION)-$(DEV_ROCKSPEC_REVISION)$(ROCKSPEC_EXT)
+VERSIONED_ROCKSPEC = $(ROCKSPEC_DIR)$(DIRSEP)$(PACKAGE_NAME)-$(PACKAGE_VERSION)-$(PACKAGE_REVISION)$(ROCKSPEC_EXT)
+
+OUTBASENAME = $(PACKAGE_NAME)$(LIBEXT)
+OUT = $(OUTBASENAME)
+SRCDIR = src
+SRC = $(SRCDIR)$(DIRSEP)$(PACKAGE_NAME).c
+OBJ = $(SRCDIR)$(DIRSEP)$(PACKAGE_NAME)$(OBJEXT)
+
+SAMPLESDIR = samples
+SAMPLES_ISNIL = $(SAMPLESDIR)$(DIRSEP)isnil.lua
+SAMPLES_NEW = $(SAMPLESDIR)$(DIRSEP)new.lua
+SAMPLES_PARSE = $(SAMPLESDIR)$(DIRSEP)parse.lua
+SAMPLES_TOSTRING = $(SAMPLESDIR)$(DIRSEP)tostring.lua
+SAMPLES_TRYPARSE = $(SAMPLESDIR)$(DIRSEP)tryparse.lua
+SAMPLES_VERSION = $(SAMPLESDIR)$(DIRSEP)version.lua
+
+CC = cc
+CCONLY = -c
+CCPIC = -fPIC
+CCDEBINFO =
+CCSTD =
+CCOPT = -O2
+CCWARN = -Wall -Wextra
+CFLAGS = $(CCDEBINFO) $(CCSTD) $(CCPIC) $(CCOPT) $(CCWARN)
+CFLAGS_EXTRA =
+CCDEFINEFLAG = -D
+CCINCFLAG = -I
+CCOUT = -o $(__EMPTY)
+
+CCSHAREDDEFINE = $(CCDEFINEFLAG)LUA_UUID_BUILD_SHARED
+CCWIN32DEFINE = $(CCDEFINEFLAG)LUA_UUID_USE_WIN32
+CCLIBUUIDDEFINE = $(CCDEFINEFLAG)LUA_UUID_USE_LIBUUID
+CCAPPLEDEFINE = $(CCDEFINEFLAG)LUA_UUID_USE_APPLE
+
+CCDEFINES = $(CCSHAREDDEFINE) $(CCLIBUUIDDEFINE)
+CCINCLUDES = $(CCINCFLAG)$(OPENARGDELIMITER)$(LUA_INCDIR)$(CLOSEARGDELIMITER) $(CCINCFLAG)$(SRCDIR)
+
+LD = $(CC)
+LDSHARED = -shared
+LDFLAGS =
+LDFLAGS_EXTRA =
+LDLIBDIRFLAG = -L
+LDLIBFLAG = -l
+LDOUT = $(CCOUT)
+LIBDIR = $(PREFIX)$(DIRSEP)lib
+LIBS = $(LDLIBDIRFLAG)$(OPENARGDELIMITER)$(LIBDIR)$(CLOSEARGDELIMITER) $(LDLIBFLAG)$(UUIDLIB)
+
+APPLE_DEPLOYMENT_KEY = MACOSX_DEPLOYMENT_TARGET
+APPLE_DEPLOYMENT_VALUE = 10.5
+
+APPLE_LDSHARED = -bundle -undefined dynamic_lookup -all_load
+APPLE_LDFRAMEWORKFLAG = -framework
+APPLE_LDCOREFOUNDATION = $(MACOSX_LDFRAMEWORKFLAG) CoreFoundation
+
+LUAROCKS = luarocks
+LUAROCKS_LINT_ARGS =
+LUAROCKS_MAKE_ARGS =
+LUAROCKS_REMOVE_ARGS =
+
+REDIRTOSTDOUT = >
+
+SED = sed
+SEDEFLAG = -e
+
+ECHO = echo
+
+RM = rm
+RMFLAGS = -f
+
+MKDIR = mkdir
+MKDIRFLAGS = -p
+
+INSTALL = install
+INSTALLEXEMOD = 0755
+INSTALLFLAGS = -m $(INSTALLEXEMOD)
+
+GIT = git
+GIT_ARCHIVE_DIR = .
+
+all: lib create-rockspecs
+
+lib: $(OUT)
+
+$(OUT): $(OBJ)
+	$(LD) $(LDSHARED) $(LDFLAGS) $(LDFLAGS_EXTRA) $(LDOUT)$(OUT) $(OBJ) $(LIBS)
+
+$(SRCDIR)$(DIRSEP)$(PACKAGE_NAME)$(OBJEXT): $(SRCDIR)$(DIRSEP)$(PACKAGE_NAME).c
+	$(CC) $(CCONLY) $(CFLAGS) $(CFLAGS_EXTRA) $(CCDEFINES) $(CCINCLUDES) $(CCOUT)$(SRCDIR)$(DIRSEP)$(PACKAGE_NAME)$(OBJEXT) $(SRCDIR)$(DIRSEP)$(PACKAGE_NAME).c
+
+create-install-dir:
+	-$(MKDIR) $(MKDIRFLAGS) $(OPENARGDELIMITER)$(INSTALL_CMOD)$(CLOSEARGDELIMITER)
+
+install: $(OUT) create-install-dir
+	$(INSTALL) $(INSTALLFLAGS) $(OUT) $(OPENARGDELIMITER)$(INSTALL_CMOD)$(CLOSEARGDELIMITER)
+
+uninstall:
+	-$(RM) $(RMFLAGS) $(OPENARGDELIMITER)$(INSTALL_CMOD)$(DIRSEP)$(OUTBASENAME)$(CLOSEARGDELIMITER)
+
+test: test-isnil test-new test-parse test-tostring test-tryparse test-version
+
+test-isnil: $(SAMPLES_ISNIL)
+	$(LUA) $(SAMPLES_ISNIL)
+
+test-new: $(SAMPLES_NEW)
+	$(LUA) $(SAMPLES_NEW)
+
+test-parse: $(SAMPLES_PARSE)
+	$(LUA) $(SAMPLES_PARSE)
+
+test-tostring: $(SAMPLES_TOSTRING)
+	$(LUA) $(SAMPLES_TOSTRING)
+
+test-tryparse: $(SAMPLES_TRYPARSE)
+	$(LUA) $(SAMPLES_TRYPARSE)
+
+test-version: $(SAMPLES_VERSION)
+	$(LUA) $(SAMPLES_VERSION)
+
+luarocks-install-dev: $(DEV_ROCKSPEC)
+	$(LUAROCKS) make $(LUAROCKS_MAKE_ARGS) $(DEV_ROCKSPEC)
+
+luarocks-install: $(VERSIONED_ROCKSPEC)
+	$(LUAROCKS) make $(LUAROCKS_MAKE_ARGS) $(VERSIONED_ROCKSPEC)
+
+luarocks-uninstall-dev:
+	$(LUAROCKS) remove $(LUAROCKS_REMOVE_ARGS) $(DEV_ROCKSPEC)
+
+luarocks-uninstall:
+	$(LUAROCKS) remove $(LUAROCKS_REMOVE_ARGS) $(VERSIONED_ROCKSPEC)
+
+lint-rockspecs: lint-dev-rockspec lint-rockspec
+
+lint-dev-rockspec: $(DEV_ROCKSPEC)
+	$(LUAROCKS) lint $(LUAROCKS_LINT_ARGS) $(DEV_ROCKSPEC)
+
+lint-rockspec: $(VERSIONED_ROCKSPEC)
+	$(LUAROCKS) lint $(LUAROCKS_LINT_ARGS) $(VERSIONED_ROCKSPEC)
+
+create-rockspecs: create-dev-rockspec create-rockspec
+
+create-dev-rockspec: $(DEV_ROCKSPEC)
+
+create-rockspec: $(VERSIONED_ROCKSPEC)
+
+echo-rockspec:
+	@$(ECHO) $(VERSIONED_ROCKSPEC)
+
+echo-dev-rockspec:
+	@$(ECHO) $(DEV_ROCKSPEC)
+
+$(DEV_ROCKSPEC): $(ROCKSPEC_TEMPLATE)
+	$(SED) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_NAME@|$(PACKAGE_NAME)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_VERSION@|$(DEV_ROCKSPEC_VERSION)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_REVISION@|$(DEV_ROCKSPEC_REVISION)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_REPOSITORY_URL@|$(PACKAGE_REPOSITORY_URL)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_SOURCE_URL@|$(PACKAGE_SOURCE_URL)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_DEV_BRANCH@|$(PACKAGE_DEV_BRANCH)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_HOMEPAGE_URL@|$(PACKAGE_HOMEPAGE_URL)|g$(CLOSEARGDELIMITER) $(ROCKSPEC_TEMPLATE)$(REDIRTOSTDOUT) $(DEV_ROCKSPEC)
+
+$(VERSIONED_ROCKSPEC): $(ROCKSPEC_TEMPLATE)
+	$(SED) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_NAME@|$(PACKAGE_NAME)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_VERSION@|$(PACKAGE_VERSION)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_REVISION@|$(PACKAGE_REVISION)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_REPOSITORY_URL@|$(PACKAGE_REPOSITORY_URL)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_SOURCE_URL@|$(PACKAGE_SOURCE_URL)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_DEV_BRANCH@|$(PACKAGE_DEV_BRANCH)|g$(CLOSEARGDELIMITER) $(SEDEFLAG) $(OPENARGDELIMITER)s|@PACKAGE_HOMEPAGE_URL@|$(PACKAGE_HOMEPAGE_URL)|g$(CLOSEARGDELIMITER) $(ROCKSPEC_TEMPLATE)$(REDIRTOSTDOUT) $(VERSIONED_ROCKSPEC)
+
+clean-$(SRCDIR)$(DIRSEP)$(PACKAGE_NAME)$(OBJEXT):
+	-$(RM) $(RMFLAGS) $(SRCDIR)$(DIRSEP)$(PACKAGE_NAME)$(OBJEXT)
+
+clean-obj: clean-$(SRCDIR)$(DIRSEP)$(PACKAGE_NAME)$(OBJEXT)
+
+clean-out:
+	-$(RM) $(RMFLAGS) $(OUT)
+
+clean-dev-rockspec:
+	-$(RM) $(RMFLAGS) $(DEV_ROCKSPEC)
+
+clean-rockspec:
+	-$(RM) $(RMFLAGS) $(VERSIONED_ROCKSPEC)
+
+clean: clean-obj clean-out clean-dev-rockspec clean-rockspec

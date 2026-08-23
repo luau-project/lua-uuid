@@ -1,5 +1,5 @@
 local rockspec_revision = "1"
-local package_version = "dev"
+local package_version = "0.1.0"
 local dev_branch = "main"
 
 local is_dev_package = package_version == "dev" or

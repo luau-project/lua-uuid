@@ -1,3 +1,34 @@
+#=================================================================================#
+# LICENSE (MIT)                                                                   #
+#=================================================================================#
+#                                                                                 #
+# The MIT License (MIT)                                                           #
+#                                                                                 #
+# Copyright (c) 2024 - 2026 luau-project https://github.com/luau-project/lua-uuid #
+#                                                                                 #
+# Permission is hereby granted, free of charge, to any person obtaining a copy    #
+# of this software and associated documentation files (the "Software"), to deal   #
+# in the Software without restriction, including without limitation the rights    #
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell       #
+# copies of the Software, and to permit persons to whom the Software is           #
+# furnished to do so, subject to the following conditions:                        #
+#                                                                                 #
+# The above copyright notice and this permission notice shall be included in all  #
+# copies or substantial portions of the Software.                                 #
+#                                                                                 #
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR      #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,        #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE     #
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER          #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,   #
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE   #
+# SOFTWARE.                                                                       #
+#                                                                                 #
+#=================================================================================#
+
+__EMPTY =
+CCONLY = -c
+CCOUT = -o $(__EMPTY)
 OBJ_EXTENSION = o
 LIB_EXTENSION = so
 CFLAGS_EXTRA = -DLUA_UUID_BUILD_SHARED -DLUA_UUID_USE_APPLE
@@ -10,15 +41,38 @@ LUA_VERSION = 5.1
 INSTALL_PREFIX = /usr/local
 INSTALL_LIBDIR = $(INSTALL_PREFIX)/lib/lua/$(LUA_VERSION)
 
-all: src/lua-uuid.$(LIB_EXTENSION)
+LUA_UUID_SHARED_LIB = src/lua-uuid.$(LIB_EXTENSION)
+LUA_UUID_SHARED_OBJ = src/lua-uuid.$(OBJ_EXTENSION)
 
-src/lua-uuid.$(LIB_EXTENSION): src/lua-uuid.$(OBJ_EXTENSION)
-	$(CC) $(LIBFLAG_EXTRA) $(LIBFLAG) -o $@ $<
+INSTALLPROG = install
+INSTALLFLAGS = -p -m 0755
+
+RM = rm
+RMFLAGS = -f
+
+.PHONY: all
+all: shared
+
+.PHONY: shared
+shared: $(LUA_UUID_SHARED_LIB)
+
+$(LUA_UUID_SHARED_LIB): $(LUA_UUID_SHARED_OBJ)
+	$(CC) $(LIBFLAG_EXTRA) $(LIBFLAG) $(CCOUT)$(LUA_UUID_SHARED_LIB) $(LUA_UUID_SHARED_OBJ)
 
 src/lua-uuid.$(OBJ_EXTENSION): src/lua-uuid.c
-	$(CC) -c $(CFLAGS_EXTRA) $(CFLAGS) -I$(LUA_INCDIR) $< -o $@
+	$(CC) $(CCONLY) $(CFLAGS_EXTRA) $(CFLAGS) -I$(LUA_INCDIR) $(CCOUT)src/lua-uuid.$(OBJ_EXTENSION) src/lua-uuid.c
 
-install: src/lua-uuid.$(LIB_EXTENSION)
-	cp $< $(INSTALL_LIBDIR)
+.PHONY: install
+install: $(LUA_UUID_SHARED_LIB)
+	$(INSTALLPROG) $(INSTALLFLAGS) $(LUA_UUID_SHARED_LIB) $(INSTALL_LIBDIR)
 
-.PHONY: all install
+.PHONY: clean-obj
+clean-obj:
+	-$(RM) $(RMFLAGS) $(LUA_UUID_SHARED_OBJ)
+
+.PHONY: clean-lib
+clean-lib:
+	-$(RM) $(RMFLAGS) $(LUA_UUID_SHARED_LIB)
+
+.PHONY: clean
+clean: clean-obj clean-lib

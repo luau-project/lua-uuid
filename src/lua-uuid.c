@@ -1,3 +1,31 @@
+/*=================================================================================**
+** LICENSE (MIT)                                                                   **
+**=================================================================================**
+**                                                                                 **
+** The MIT License (MIT)                                                           **
+**                                                                                 **
+** Copyright (c) 2024 - 2026 luau-project https://github.com/luau-project/lua-uuid **
+**                                                                                 **
+** Permission is hereby granted, free of charge, to any person obtaining a copy    **
+** of this software and associated documentation files (the "Software"), to deal   **
+** in the Software without restriction, including without limitation the rights    **
+** to use, copy, modify, merge, publish, distribute, sublicense, and/or sell       **
+** copies of the Software, and to permit persons to whom the Software is           **
+** furnished to do so, subject to the following conditions:                        **
+**                                                                                 **
+** The above copyright notice and this permission notice shall be included in all  **
+** copies or substantial portions of the Software.                                 **
+**                                                                                 **
+** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR      **
+** IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,        **
+** FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE     **
+** AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER          **
+** LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,   **
+** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE   **
+** SOFTWARE.                                                                       **
+**                                                                                 **
+**=================================================================================*/
+
 #include "lua-uuid.h"
 
 #if defined(LUA_UUID_USE_WIN32)
@@ -6,6 +34,11 @@
 #include <uuid/uuid.h>
 #elif defined(LUA_UUID_USE_APPLE)
 #include <CoreFoundation/CFUUID.h>
+#else
+#error "Unknown configuration to build lua-uuid. \
+        Please, compile with `-DLUA_UUID_USE_WIN32`, \
+        `-DLUA_UUID_USE_LIBUUID` or \
+        `-DLUA_UUID_USE_APPLE`"
 #endif
 
 #include <string.h>
@@ -87,22 +120,29 @@ static void *lua_uuid_testudata(lua_State *L, int ud, const char *tname)
 
 static int lua_uuid_new(lua_State *L)
 {
-    void *ud = lua_newuserdata(L, sizeof(LuaUuid));
-    if (ud == NULL)
+#if defined(LUA_UUID_USE_WIN32)
+    RPC_STATUS create_status;
+#elif defined(LUA_UUID_USE_LIBUUID)
+    /* do nothing */
+#elif defined(LUA_UUID_USE_APPLE)
+    /* do nothing */
+#endif
+
+    LuaUuid *uuid = (LuaUuid *)lua_newuserdata(L, sizeof(LuaUuid));
+    if (uuid == NULL)
     {
-        luaL_error(L, "Failed to create userdata");
+        return luaL_error(L, "Failed to create userdata");
     }
 
     luaL_getmetatable(L, LUA_UUID_METATABLE);
     lua_setmetatable(L, -2);
-    LuaUuid *uuid = (LuaUuid *)ud;
 
 #if defined(LUA_UUID_USE_WIN32)
-    RPC_STATUS create_status = UuidCreate(&(uuid->data));
-    
+    create_status = UuidCreate(&(uuid->data));
+
     if (create_status != RPC_S_OK)
     {
-        luaL_error(L, "Failed to create UUID");
+        return luaL_error(L, "Failed to create UUID");
     }
 #elif defined(LUA_UUID_USE_LIBUUID)
     uuid_generate(uuid->data);
@@ -111,7 +151,7 @@ static int lua_uuid_new(lua_State *L)
 
     if (uuid->data == NULL)
     {
-        luaL_error(L, "Failed to create UUID");
+        return luaL_error(L, "Failed to create UUID");
     }
 #endif
 
@@ -120,6 +160,7 @@ static int lua_uuid_new(lua_State *L)
 
 static int lua_uuid_parse(lua_State *L)
 {
+    LuaUuid *uuid;
     const char *s = luaL_checkstring(L, 1);
 
 #if defined(LUA_UUID_USE_WIN32)
@@ -128,7 +169,7 @@ static int lua_uuid_parse(lua_State *L)
 
     if (parse_status != RPC_S_OK)
     {
-        luaL_error(L, "Failed to parse UUID");
+        return luaL_error(L, "Failed to parse UUID");
     }
 
 #elif defined(LUA_UUID_USE_LIBUUID)
@@ -137,30 +178,30 @@ static int lua_uuid_parse(lua_State *L)
 
     if (parse_status != 0)
     {
-        luaL_error(L, "Failed to parse UUID");
+        return luaL_error(L, "Failed to parse UUID");
     }
 
 #elif defined(LUA_UUID_USE_APPLE)
+    CFUUIDRef data;
     CFStringRef strRef = CFStringCreateWithCString(NULL, s, kCFStringEncodingISOLatin1);
 
     if (strRef == NULL)
     {
-        luaL_error(L, "Failed to create string ref");
+        return luaL_error(L, "Failed to create string ref");
     }
 
-    CFUUIDRef data = CFUUIDCreateFromString(NULL, strRef);
+    data = CFUUIDCreateFromString(NULL, strRef);
 
     CFRelease(strRef);
 
     if (data == NULL)
     {
-        luaL_error(L, "Failed to parse UUID");
+        return luaL_error(L, "Failed to parse UUID");
     }
-
 #endif
 
-    void *ud = lua_newuserdata(L, sizeof(LuaUuid));
-    if (ud == NULL)
+    uuid = (LuaUuid *)lua_newuserdata(L, sizeof(LuaUuid));
+    if (uuid == NULL)
     {
 #if defined(LUA_UUID_USE_WIN32)
         /* do nothing */
@@ -169,13 +210,12 @@ static int lua_uuid_parse(lua_State *L)
 #elif defined(LUA_UUID_USE_APPLE)
         CFRelease(data);
 #endif
-
-        luaL_error(L, "Failed to create userdata");
+        return luaL_error(L, "Failed to create userdata");
     }
-    
+
     luaL_getmetatable(L, LUA_UUID_METATABLE);
     lua_setmetatable(L, -2);
-    LuaUuid *uuid = (LuaUuid *)ud;
+
 #if defined(LUA_UUID_USE_WIN32)
     memcpy(&(uuid->data), &data, sizeof(UUID));
 #elif defined(LUA_UUID_USE_LIBUUID)
@@ -185,6 +225,87 @@ static int lua_uuid_parse(lua_State *L)
 #endif
 
     return 1;
+}
+
+static int lua_uuid_tryparse(lua_State *L)
+{
+    LuaUuid *uuid;
+    const char *s = luaL_checkstring(L, 1);
+
+#if defined(LUA_UUID_USE_WIN32)
+    UUID data;
+    RPC_STATUS parse_status = UuidFromStringA((RPC_CSTR)s, &data);
+
+    if (parse_status != RPC_S_OK)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "Failed to parse UUID");
+        return 2;
+    }
+
+#elif defined(LUA_UUID_USE_LIBUUID)
+    uuid_t data;
+    int parse_status = uuid_parse(s, data);
+
+    if (parse_status != 0)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "Failed to parse UUID");
+        return 2;
+    }
+
+#elif defined(LUA_UUID_USE_APPLE)
+    CFUUIDRef data;
+    CFStringRef strRef = CFStringCreateWithCString(NULL, s, kCFStringEncodingISOLatin1);
+
+    if (strRef == NULL)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "Failed to create a CFStringRef");
+        return 2;
+    }
+
+    data = CFUUIDCreateFromString(NULL, strRef);
+
+    CFRelease(strRef);
+
+    if (data == NULL)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "Failed to parse UUID");
+        return 2;
+    }
+#endif
+
+    uuid = (LuaUuid *)lua_newuserdata(L, sizeof(LuaUuid));
+    if (uuid == NULL)
+    {
+#if defined(LUA_UUID_USE_WIN32)
+        /* do nothing */
+#elif defined(LUA_UUID_USE_LIBUUID)
+        /* do nothing */
+#elif defined(LUA_UUID_USE_APPLE)
+        CFRelease(data);
+#endif
+        lua_pushnil(L);
+        lua_pushstring(L, "Failed to create userdata");
+        return 2;
+    }
+
+    luaL_getmetatable(L, LUA_UUID_METATABLE);
+    lua_setmetatable(L, -2);
+
+#if defined(LUA_UUID_USE_WIN32)
+    memcpy(&(uuid->data), &data, sizeof(UUID));
+#elif defined(LUA_UUID_USE_LIBUUID)
+    memcpy(uuid->data, data, sizeof(uuid_t));
+#elif defined(LUA_UUID_USE_APPLE)
+    memcpy(&(uuid->data), &data, sizeof(CFUUIDRef));
+#endif
+
+    lua_pushnil(L);
+
+    return 2;
 }
 
 static int lua_uuid_is_nil(lua_State *L)
@@ -198,24 +319,28 @@ static int lua_uuid_is_nil(lua_State *L)
 #elif defined(LUA_UUID_USE_LIBUUID)
     res = uuid_is_null(uuid->data);
 #elif defined(LUA_UUID_USE_APPLE)
-    CFUUIDBytes uuid_bytes = CFUUIDGetUUIDBytes(uuid->data);
+    CFUUIDBytes uuid_bytes;
+    if (uuid->data == NULL) {
+        return luaL_error(L, "Attempt to reuse a closed GUID / UUID instance.");
+    }
+    uuid_bytes = CFUUIDGetUUIDBytes(uuid->data);
     
-    res = uuid_bytes.byte0 == 0 &&
-        uuid_bytes.byte1 == 0 &&
-        uuid_bytes.byte2 == 0 &&
-        uuid_bytes.byte3 == 0 &&
-        uuid_bytes.byte4 == 0 &&
-        uuid_bytes.byte5 == 0 &&
-        uuid_bytes.byte6 == 0 &&
-        uuid_bytes.byte7 == 0 &&
-        uuid_bytes.byte8 == 0 &&
-        uuid_bytes.byte9 == 0 &&
-        uuid_bytes.byte10 == 0 &&
-        uuid_bytes.byte11 == 0 &&
-        uuid_bytes.byte12 == 0 &&
-        uuid_bytes.byte13 == 0 &&
-        uuid_bytes.byte14 == 0 &&
-        uuid_bytes.byte15 == 0;
+    res = uuid_bytes.byte0  == 0 &&
+          uuid_bytes.byte1  == 0 &&
+          uuid_bytes.byte2  == 0 &&
+          uuid_bytes.byte3  == 0 &&
+          uuid_bytes.byte4  == 0 &&
+          uuid_bytes.byte5  == 0 &&
+          uuid_bytes.byte6  == 0 &&
+          uuid_bytes.byte7  == 0 &&
+          uuid_bytes.byte8  == 0 &&
+          uuid_bytes.byte9  == 0 &&
+          uuid_bytes.byte10 == 0 &&
+          uuid_bytes.byte11 == 0 &&
+          uuid_bytes.byte12 == 0 &&
+          uuid_bytes.byte13 == 0 &&
+          uuid_bytes.byte14 == 0 &&
+          uuid_bytes.byte15 == 0;
 #endif
 
     lua_pushboolean(L, res);
@@ -237,11 +362,11 @@ static int lua_uuid_to_string(lua_State *L)
             RpcStringFreeA(&buffer);
         }
 
-        luaL_error(L, "Failed to convert to string");
+        return luaL_error(L, "Failed to convert to string");
     }
 
     lua_pushstring(L, (const char *)buffer);
-    
+
     if (buffer != NULL)
     {
         RpcStringFreeA(&buffer);
@@ -251,19 +376,20 @@ static int lua_uuid_to_string(lua_State *L)
     uuid_unparse(uuid->data, buffer);
     lua_pushstring(L, buffer);
 #elif defined(LUA_UUID_USE_APPLE)
+    const char *buffer;
     CFStringRef strRef = CFUUIDCreateString(NULL, uuid->data);
 
     if (strRef == NULL)
     {
-        luaL_error(L, "Failed to create string from UUID");
+        return luaL_error(L, "Failed to create string from UUID");
     }
 
-    const char *buffer = CFStringGetCStringPtr(strRef, kCFStringEncodingISOLatin1);
-    
+    buffer = CFStringGetCStringPtr(strRef, kCFStringEncodingISOLatin1);
+
     if (buffer == NULL)
     {
         CFRelease(strRef);
-        luaL_error(L, "Failed to get C string pointer");
+        return luaL_error(L, "Failed to get C string pointer");
     }
 
     lua_pushstring(L, buffer);
@@ -284,7 +410,7 @@ static int lua_uuid_equal(lua_State *L)
         void *ud_left = lua_uuid_testudata(L, 1, LUA_UUID_METATABLE);
         void *ud_right = lua_uuid_testudata(L, 2, LUA_UUID_METATABLE);
 
-        if (ud_left != NULL && ud_right != NULL)
+        if ((ud_left != NULL) && (ud_right != NULL))
         {
             LuaUuid *left = (LuaUuid *)ud_left;
             LuaUuid *right = (LuaUuid *)ud_right;
@@ -304,15 +430,15 @@ static int lua_uuid_equal(lua_State *L)
             CFUUIDBytes uuid_bytes_right = CFUUIDGetUUIDBytes(right->data);
             
             int is_equal = uuid_bytes_left.byte0 == uuid_bytes_right.byte0 &&
-                uuid_bytes_left.byte1 == uuid_bytes_right.byte1 &&
-                uuid_bytes_left.byte2 == uuid_bytes_right.byte2 &&
-                uuid_bytes_left.byte3 == uuid_bytes_right.byte3 &&
-                uuid_bytes_left.byte4 == uuid_bytes_right.byte4 &&
-                uuid_bytes_left.byte5 == uuid_bytes_right.byte5 &&
-                uuid_bytes_left.byte6 == uuid_bytes_right.byte6 &&
-                uuid_bytes_left.byte7 == uuid_bytes_right.byte7 &&
-                uuid_bytes_left.byte8 == uuid_bytes_right.byte8 &&
-                uuid_bytes_left.byte9 == uuid_bytes_right.byte9 &&
+                uuid_bytes_left.byte1  == uuid_bytes_right.byte1 &&
+                uuid_bytes_left.byte2  == uuid_bytes_right.byte2 &&
+                uuid_bytes_left.byte3  == uuid_bytes_right.byte3 &&
+                uuid_bytes_left.byte4  == uuid_bytes_right.byte4 &&
+                uuid_bytes_left.byte5  == uuid_bytes_right.byte5 &&
+                uuid_bytes_left.byte6  == uuid_bytes_right.byte6 &&
+                uuid_bytes_left.byte7  == uuid_bytes_right.byte7 &&
+                uuid_bytes_left.byte8  == uuid_bytes_right.byte8 &&
+                uuid_bytes_left.byte9  == uuid_bytes_right.byte9 &&
                 uuid_bytes_left.byte10 == uuid_bytes_right.byte10 &&
                 uuid_bytes_left.byte11 == uuid_bytes_right.byte11 &&
                 uuid_bytes_left.byte12 == uuid_bytes_right.byte12 &&
@@ -336,24 +462,29 @@ static int lua_uuid_gc(lua_State *L)
 {
 #if defined(LUA_UUID_USE_WIN32)
     /* do nothing */
+    (void)L;
 #elif defined(LUA_UUID_USE_LIBUUID)
     /* do nothing */
+    (void)L;
 #elif defined(LUA_UUID_USE_APPLE)
     LuaUuid *uuid = lua_uuid_check(L, 1);
-    CFRelease(uuid->data);
+    if (uuid->data != NULL) {
+        CFRelease(uuid->data);
+    }
+    uuid->data = NULL;
 #endif
     return 0;
 }
 
 static int lua_uuid_newindex(lua_State *L)
 {
-    luaL_error(L, "Read-only object");
-    return 1;
+    return luaL_error(L, "Read-only object");
 }
 
 static const luaL_Reg lua_uuid_public_functions[] = {
     {"new", lua_uuid_new },
     {"parse", lua_uuid_parse },
+    {"tryparse", lua_uuid_tryparse },
     { NULL, NULL }
 };
 
@@ -382,6 +513,10 @@ LUA_UUID_EXPORT int luaopen_uuid(lua_State *L)
 #else
     luaL_setfuncs(L, lua_uuid_member_functions, 0);
 #endif
+
+    lua_pushstring(L, "version");
+    lua_pushstring(L, LUA_UUID_VERSION);
+    lua_settable(L, -3);
 
     lua_pushstring(L, "__index");
     lua_pushvalue(L, -2);

@@ -1,6 +1,6 @@
-local rockspec_revision = "1"
-local package_version = "dev"
-local dev_branch = "main"
+local rockspec_revision = "@PACKAGE_REVISION@"
+local package_version = "@PACKAGE_VERSION@"
+local dev_branch = "@PACKAGE_DEV_BRANCH@"
 
 local is_dev_package = package_version == "dev" or
                        package_version == "scm" or
@@ -9,20 +9,20 @@ local is_dev_package = package_version == "dev" or
                        package_version == "svn" or
                        package_version == "hg"
 
-package = "lua-uuid"
+package = "@PACKAGE_NAME@"
 version = package_version .. "-" .. rockspec_revision
 
 source = {
-    url = [=[git+https://github.com/luau-project/lua-uuid.git]=],
+    url = [=[@PACKAGE_SOURCE_URL@]=],
     branch = is_dev_package and dev_branch or nil,
     tag = (not is_dev_package) and ("v" .. package_version) or nil
 }
 
 description = {
-    homepage = [=[https://github.com/luau-project/lua-uuid]=],
+    homepage = [=[@PACKAGE_HOMEPAGE_URL@]=],
     summary = [[Lightweight, native GUID / UUID library for Lua]],
     detailed = [=[
-lua-uuid is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
+@PACKAGE_NAME@ is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
 
 * On Unix-like distributions, it uses libuuid to generate UUIDs;
 * On Windows, it uses the WINAPI rpcrt4 library;
@@ -62,8 +62,8 @@ local function build_plat(plat)
         return {
             type = "builtin",
             modules = {
-                ["lua-uuid"] = {
-                    sources = { "src/lua-uuid.c" },
+                ["@PACKAGE_NAME@"] = {
+                    sources = { "src/@PACKAGE_NAME@.c" },
                     libraries = { "uuid" },
                     defines = { "LUA_UUID_BUILD_SHARED", "LUA_UUID_USE_LIBUUID" },
                     incdirs = { "src", "$(UUID_INCDIR)" },
@@ -75,8 +75,8 @@ local function build_plat(plat)
         return {
             type = "builtin",
             modules = {
-                ["lua-uuid"] = {
-                    sources = { "src/lua-uuid.c" },
+                ["@PACKAGE_NAME@"] = {
+                    sources = { "src/@PACKAGE_NAME@.c" },
                     libraries = { "rpcrt4" },
                     defines = { "LUA_UUID_BUILD_SHARED", "LUA_UUID_USE_WIN32" },
                     incdirs = { "src" },

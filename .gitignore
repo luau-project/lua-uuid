@@ -2,4 +2,8 @@
 *.so
 *.dll
 *.lib
-.vscode
+*.exp
+*.pdb
+*.dylib
+*.zip
+*.tar.gz

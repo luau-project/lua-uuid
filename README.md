@@ -1,18 +1,14 @@
 # lua-uuid
 
-[![CI](https://github.com/luau-project/lua-uuid/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml) [![LuaRocks](https://img.shields.io/luarocks/v/luau-project/lua-uuid?label=LuaRocks&color=2c3e67)](https://luarocks.org/modules/luau-project/lua-uuid)
+[![LuaRocks](https://img.shields.io/luarocks/v/luau-project/lua-uuid?label=LuaRocks&color=2c3e67)](https://luarocks.org/modules/luau-project/lua-uuid)
 
 ## Overview
 
 **lua-uuid** is a lightweight, native library for Lua (5.1 and newer) to deal with Universally Unique Id (UUID).
 
-* On Unix-like distributions, it uses ```libuuid``` to generate UUIDs;
-* On Windows, it uses the WINAPI ```rpcrt4``` library;
-* On macOS / iOS, it uses the ```CoreFoundation``` framework.
-
-> [!NOTE]
-> 
-> ```lua-uuid``` is implemented in pure ANSI C, and also compiles as C++.
+* On Unix-like distributions, it uses `libuuid` to generate UUIDs;
+* On Windows, it uses the WINAPI `rpcrt4` library;
+* On macOS / iOS, it uses the `CoreFoundation` framework.
 
 ## Table of Contents
 
@@ -20,11 +16,16 @@
 * [Usage](#usage)
     * [Generate GUIDs / UUIDs](#generate-guids--uuids)
     * [Parse GUIDs / UUIDs from string](#parse-guids--uuids-from-string)
+    * [Try to parse GUIDs / UUIDs from string](#try-to-parse-guids--uuids-from-string)
     * [Compare GUIDs / UUIDs](#compare-guids--uuids)
     * [Verify GUIDs / UUIDs nullity](#verify-guids--uuids-nullity)
+    * [Print the library version](#print-the-library-version)
+* [Constants](#constants)
+    * [version](#version)
 * [Static Methods](#static-methods)
     * [new](#new)
     * [parse](#parse)
+    * [tryparse](#tryparse)
 * [Instance Methods](#instance-methods)
     * [isnil](#isnil)
 * [Metamethods](#metamethods)
@@ -37,7 +38,7 @@
 
 > [!IMPORTANT]
 > 
-> On Unix-like distributions, ```lua-uuid``` depends on ```libuuid```:
+> On Unix-like distributions, `lua-uuid` depends on `libuuid`:
 > 
 > * On Debian-based (e.g: Ubuntu) distributions:
 > 
@@ -119,6 +120,36 @@ print(id1)
 print(id2)
 ```
 
+### Try to parse GUIDs / UUIDs from string
+
+```lua
+-- load the library
+local uuid = require("lua-uuid")
+
+-- try to parse UUIDs from string
+local id1, err1 = uuid.tryparse("some random string")
+local id2, err2 = uuid.tryparse("653096e0-b09f-4626-b65e-07d4e21c70c6")
+
+-- print each UUID
+if (id1 == nil) then
+    -- this branch is going
+    -- to execute, because
+    -- the string is not
+    -- a valid GUID / UUID
+    print(err1)
+else
+    print(id1)
+end
+
+if (id2 == nil) then
+    print(err2)
+else
+    -- this branch is going
+    -- to execute
+    print(id2)
+end
+```
+
 ### Compare GUIDs / UUIDs
 
 ```lua
@@ -164,13 +195,30 @@ local id3 = uuid.parse("00000000-0000-0000-0000-000000000000")
 print(id3:isnil())
 ```
 
+### Print the library version
+
+```lua
+-- load the library
+local uuid = require("lua-uuid")
+
+-- print the library version
+print("lua-uuid is version " .. uuid.version)
+```
+
+## Constants
+
+* *Description*: The library version
+* *Signature*: ```version```
+* *Return*: ```(string)```
+* *Usage*: See [here](#print-the-library-version)
+
 ## Static Methods
 
 ### new
 
 * *Description*: Generates a new GUID / UUID
 * *Signature*: ```new()```
-    * *return*: ```(userdata)```
+* *Return*: ```(userdata)```
 * *Usage*: See [here](#generate-guids--uuids)
 
 ### parse
@@ -178,8 +226,18 @@ print(id3:isnil())
 * *Description*: Parses a GUID / UUID from a string value
 * *Signature*: ```parse(value)```
     * *value* (string): the string to be parsed
-    * *return*: ```(userdata)```
+* *Return*: ```(userdata)```
 * *Usage*: See [here](#parse-guids--uuids-from-string)
+
+### tryparse
+
+* *Description*: Tries to parse a GUID / UUID from a string value
+* *Signature*: ```tryparse(value)```
+    * *value* (string): the string to be parsed
+* *Return*:
+        * *obj*: an ```userdata``` representing the GUID / UUID on success or `nil` on failure;
+        * *err*: `nil` on success or ```string``` containing a description of the error.
+* *Usage*: See [here](#try-to-parse-guids--uuids-from-string)
 
 ## Instance Methods
 
@@ -193,7 +251,7 @@ print(id3:isnil())
 
 * *Signature*: ```instance:isnil()```
     * *instance* (userdata): the GUID / UUID instance to check for nullity
-    * *return*: ```(boolean)```
+* *Return*: ```(boolean)```
 * *Usage*: See [here](#verify-guids--uuids-nullity)
 
 ## Metamethods
@@ -204,7 +262,7 @@ print(id3:isnil())
 * *Signature*: ```left == right```
     * *left* (any): the left-side element
     * *right* (any): the right-side element
-    * *return*: ```(boolean)```
+* *Return*: ```(boolean)```
 * *Usage*: See [here](#compare-guids--uuids)
 
 ### __tostring
@@ -212,39 +270,12 @@ print(id3:isnil())
 * *Description*: Converts the GUID / UUID to string
 * *Signature*: ```tostring(value)```
     * *value* (userdata): the GUID / UUID to perform the conversion
-    * *return*: ```(string)```
+* *Return*: ```(string)```
 * *Usage*: See [here](#generate-guids--uuids)
 
-## Change log
-* v0.0.8:
-    * Moving back to the old mode listing platforms on ```build``` and ```external_dependencies``` tables for platform overrides. At the moment, platform overrides merge tables rather than selecting the appropriate value.
-* v0.0.7:
-    * Allowed any Unix-like distribution to build and install ```lua-uuid```, depending on the system-provided development package for ```libuuid```;
-    * Added a CI job to build and test on Cygwin;
-    * Now, as a Unix-like distribution, Cygwin depends on the package ```libuuid-devel```.
-* v0.0.6:
-> [!IMPORTANT]
-> 
-> This is a bug-fix release that fixed a buffer overflow in the binding of ```libuuid```. Users running older versions must upgrade as soon as possible to avoid potential exploits.
-* v0.0.5:
-    * Adhering to C89;
-    * Added CI job to make sure that this library conforms to C89;
-    * Added another CI job to assert that this library builds fine as C++ code;
-    * Linting rockspecs on CI;
-    * Minor changes on the makefile for macOS / iOS;
-    * The naming format for the published rockspecs changed from ```vX.Y.Z-0``` to ```vX.Y.Z-1```.
-* v0.0.4:
-    * Added support for BSD (e.g: FreeBSD, NetBSD, OpenBSD and DragonFly);
-    * Moved ```#include <lua.h>``` and ```LUA_UUID_EXPORT``` macro definition to outside of ```__cplusplus``` declarations on ```lua-uuid.h```.
-* v0.0.3:
-    * Changed to throw error when ```lua_newuserdata``` returns ```NULL```;
-    * Added macro ```LUA_UUID_BUILD_SHARED``` to ```CFLAGS_EXTRA``` on macos;
-    * Changed ```luajit-master``` to ```luajit``` on CI when testing for ```LuaJIT```;
-    * Added print statements on [tostring.lua](./samples/tostring.lua) sample;
-    * Removed build / testing from CI for x86 packages on MSYS2;
-    * Added documentation for static, instance and metamethods to the README.
-* v0.0.2:
-    * Fixed syntax issue in the rockspec lua-uuid-0.0.1-0.rockspec
+## History
+
+Browse the [changelog](./CHANGELOG.md)
 
 ## Future works
 

@@ -2,860 +2,141 @@ name: CI
 
 on:
   push:
+    branches:
+      - "*"
+    tags-ignore:
+      - "*"
     paths-ignore:
-      - "**.md"
-      - "docs/**"
+      - "*.md"
   pull_request:
     paths-ignore:
-      - "**.md"
-      - "docs/**"
+      - "*.md"
 
-env:
-  ROCKSPEC_VERSION: 0.0.8
-  DEV_ROCKSPEC: lua-uuid-dev-1.rockspec
+permissions: read-all
 
 jobs:
-  c89-build:
-    name: Build C89
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        shell: pwsh
-    
-    strategy:
-      matrix:
-        
-        lua-version:
-          - 5.1.5
-          - 5.2.4
-          - 5.3.6
-          - 5.4.7
-      
-    steps:
-
-      - name: Validate Lua version, and set environment variables
-        run: |
-          if (-not ("${{ matrix.lua-version }}" -match "^(\d+)\.(\d+)(\.\d+)*$"))
-          {
-            Write-Host "Invalid Lua version (X.Y.Z) expected";
-            exit 1;
-          }
-
-          $lua_short_version = "${{ matrix.lua-version }}" -split "\." |
-            Select-Object -First 2 |
-            Join-String -Separator ".";
-
-          Add-Content "${{ github.env }}" "LUA_SHORT_VERSION=${lua_short_version}";
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: lua-uuid
-
-      - name: Install libuuid-dev
-        run: sudo apt install -y uuid-dev
-
-      - name: Download and extract Lua ${{ matrix.lua-version }} source code, and set environment variables
-        run: |
-          $targz = "lua-${{ matrix.lua-version }}.tar.gz";
-          $targz_path = Join-Path -Path "${{ runner.temp }}" -ChildPath $targz;
-
-          Invoke-WebRequest -Uri "https://lua.org/ftp/${targz}" -OutFile "$targz_path";
-          tar -C "${{ runner.temp }}" -xf "$targz_path";
-
-          $lua_source_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "lua-${{ matrix.lua-version }}";
-
-          if (-not (Test-Path $lua_source_dir))
-          {
-            $color = (0x1b -as [char]) + "[36m";
-
-            Write-Host "Unable to find Lua source code directory: ${color}${lua_source_dir}";
-
-            exit 1;
-          }
-
-          $install_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "installed-lua-${{ matrix.lua-version }}";
-          
-          Add-Content "${{ github.env }}" "LUA_SRC_DIR=${lua_source_dir}";
-          Add-Content "${{ github.env }}" "LUA_DIR=${install_dir}";
-      
-      - name: Set environment variables depending on Lua version for C89 make targets
-        run: |
-          $c89_target = "all";
-          $c89_src_dir = Join-Path -Path "${{ env.LUA_SRC_DIR }}" -ChildPath "src";
-          
-          if ("5.1", "5.2" -contains "${{ env.LUA_SHORT_VERSION }}")
-          {
-            $cc = "gcc";
-            $c89_cflags_name = "MYCFLAGS";
-            $c89_libs_name = "MYLIBS";
-            $c89_macro = "LUA_ANSI";
-          }
-          else
-          {
-            $cc = "gcc -std=c89";
-            $c89_cflags_name = "MYCFLAGS";
-            $c89_libs_name = "SYSLIBS";
-            $c89_macro = "LUA_USE_C89";
-          }
-          
-          Add-Content "${{ github.env }}" "CC=${cc}";
-          Add-Content "${{ github.env }}" "C89_SRC_DIR=${c89_src_dir}";
-          Add-Content "${{ github.env }}" "C89_CFLAGS_NAME=${c89_cflags_name}";
-          Add-Content "${{ github.env }}" "C89_LIBS_NAME=${c89_libs_name}";
-          Add-Content "${{ github.env }}" "C89_TARGET=${c89_target}";
-          Add-Content "${{ github.env }}" "C89_MACRO=${c89_macro}";
-      
-      - name: Build Lua ${{ matrix.lua-version }}
-        run: |
-          make -C "${{ env.C89_SRC_DIR }}" `
-            "${{ env.C89_TARGET }}" `
-            "${{ env.C89_CFLAGS_NAME }}=-D${{ env.C89_MACRO }} -DLUA_USE_DLOPEN" `
-            "${{ env.C89_LIBS_NAME }}=-Wl,-E -ldl" `
-            "CC=${{ env.CC }}";
-      
-      - name: Install Lua ${{ matrix.lua-version }}, and set environment variables
-        run: |
-          make -C "${{ env.LUA_SRC_DIR }}" `
-            install `
-            "INSTALL_TOP=${{ env.LUA_DIR }}";
-
-          $lua_bindir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "bin";
-          $lua_incdir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "include";
-
-          Add-Content "${{ github.path }}" "${lua_bindir}";
-          Add-Content "${{ github.env }}" "LUA_INCDIR=${lua_incdir}";
-      
-      - name: Compile lua-uuid
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CC }} `
-            "-O2" `
-            "-Wall" `
-            "-c" `
-            "-fPIC" `
-            "-o" "src/lua-uuid.o" `
-            "-I${{ env.LUA_INCDIR }}" `
-            "-Isrc" `
-            "-I/usr/include/uuid" `
-            "-D${{ env.C89_MACRO }}" `
-            "-DLUA_USE_DLOPEN" `
-            "-DLUA_UUID_BUILD_SHARED" `
-            "-DLUA_UUID_USE_LIBUUID" `
-            "src/lua-uuid.c";
- 
-      - name: Link lua-uuid
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CC }} "-shared" `
-            "-o" "lua-uuid.so" `
-            "src/lua-uuid.o" `
-            "-luuid";
- 
-      - name: Run samples
-        working-directory: lua-uuid
-        run: |
-          Get-ChildItem "samples" -Recurse -File |
-            Where-Object Extension -EQ ".lua" |
-            Select-Object -ExpandProperty FullName |
-            Foreach-Object {
-              $color = (0x1b -as [char]) + "[36m";
-
-              Write-Host "Running sample file: ${color}$_";
-
-              lua "$_";
-
-              if ($LASTEXITCODE -ne 0)
-              {
-                exit 1;
-              }
-            };
-  
-  cplusplus-build:
-    name: Build C++
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        shell: pwsh
-    
-    strategy:
-      matrix:
-        
-        lua-version:
-          - 5.1.5
-          - 5.2.4
-          - 5.3.6
-          - 5.4.7
-        
-        use-clang:
-          - 'true'
-          - 'false'
-      
-    steps:
-
-      - name: Validate Lua version
-        run: |
-          if (-not ("${{ matrix.lua-version }}" -match "^(\d+)\.(\d+)(\.\d+)*$"))
-          {
-            Write-Host "Invalid Lua version (X.Y.Z) expected";
-            exit 1;
-          }
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: lua-uuid
-
-      - name: Install dependencies
-        run: sudo apt install -y uuid-dev libreadline-dev
-
-      - name: Install clang
-        if: ${{ matrix.use-clang == 'true' }}
-        run: sudo apt install -y clang
-
-      - name: Download and extract Lua ${{ matrix.lua-version }} source code, and set environment variables
-        run: |
-          $targz = "lua-${{ matrix.lua-version }}.tar.gz";
-          $targz_path = Join-Path -Path "${{ runner.temp }}" -ChildPath $targz;
-
-          Invoke-WebRequest -Uri "https://lua.org/ftp/${targz}" -OutFile "$targz_path";
-          tar -C "${{ runner.temp }}" -xf "$targz_path";
-
-          $lua_source_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "lua-${{ matrix.lua-version }}";
-
-          if (-not (Test-Path $lua_source_dir))
-          {
-            $color = (0x1b -as [char]) + "[36m";
-
-            Write-Host "Unable to find Lua source code directory: ${color}${lua_source_dir}";
-
-            exit 1;
-          }
-
-          $install_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "installed-lua-${{ matrix.lua-version }}";
-          
-          if ("${{ matrix.use-clang }}" -eq "true")
-          {
-            Add-Content "${{ github.env }}" "CC=clang++";
-          }
-          else
-          {
-            Add-Content "${{ github.env }}" "CC=g++";
-          }
-          Add-Content "${{ github.env }}" "LUA_SRC_DIR=${lua_source_dir}";
-          Add-Content "${{ github.env }}" "LUA_DIR=${install_dir}";
-      
-      - name: Build Lua ${{ matrix.lua-version }}
-        run: |
-          make -C "${{ env.LUA_SRC_DIR }}" `
-            linux `
-            "CC=${{ env.CC }}";
-      
-      - name: Install Lua ${{ matrix.lua-version }}, and set environment variables
-        run: |
-          make -C "${{ env.LUA_SRC_DIR }}" `
-            install `
-            "INSTALL_TOP=${{ env.LUA_DIR }}";
-
-          $lua_bindir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "bin";
-          $lua_incdir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "include";
-
-          Add-Content "${{ github.path }}" "${lua_bindir}";
-          Add-Content "${{ github.env }}" "LUA_INCDIR=${lua_incdir}";
-      
-      - name: Compile lua-uuid
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CC }} `
-            "-O2" `
-            "-Wall" `
-            "-c" `
-            "-fPIC" `
-            "-o" "src/lua-uuid.o" `
-            "-I${{ env.LUA_INCDIR }}" `
-            "-Isrc" `
-            "-I/usr/include/uuid" `
-            "-DLUA_UUID_BUILD_SHARED" `
-            "-DLUA_UUID_USE_LIBUUID" `
-            "src/lua-uuid.c";
- 
-      - name: Link lua-uuid
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CC }} "-shared" `
-            "-o" "lua-uuid.so" `
-            "src/lua-uuid.o" `
-            "-luuid";
- 
-      - name: Run samples
-        working-directory: lua-uuid
-        run: |
-          Get-ChildItem "samples" -Recurse -File |
-            Where-Object Extension -EQ ".lua" |
-            Select-Object -ExpandProperty FullName |
-            Foreach-Object {
-              $color = (0x1b -as [char]) + "[36m";
-
-              Write-Host "Running sample file: ${color}$_";
-
-              lua "$_";
-
-              if ($LASTEXITCODE -ne 0)
-              {
-                exit 1;
-              }
-            };
-  
-  clang-build:
-    name: Clang Build
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        shell: pwsh
-    
-    strategy:
-      matrix:
-        
-        lua-version:
-          - 5.1.5
-          - 5.2.4
-          - 5.3.6
-          - 5.4.7
-      
-    steps:
-
-      - name: Validate Lua version
-        run: |
-          if (-not ("${{ matrix.lua-version }}" -match "^(\d+)\.(\d+)(\.\d+)*$"))
-          {
-            Write-Host "Invalid Lua version (X.Y.Z) expected";
-            exit 1;
-          }
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: lua-uuid
-
-      - name: Install dependencies
-        run: sudo apt install -y uuid-dev libreadline-dev clang
-
-      - name: Download and extract Lua ${{ matrix.lua-version }} source code, and set environment variables
-        run: |
-          $targz = "lua-${{ matrix.lua-version }}.tar.gz";
-          $targz_path = Join-Path -Path "${{ runner.temp }}" -ChildPath $targz;
-
-          Invoke-WebRequest -Uri "https://lua.org/ftp/${targz}" -OutFile "$targz_path";
-          tar -C "${{ runner.temp }}" -xf "$targz_path";
-
-          $lua_source_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "lua-${{ matrix.lua-version }}";
-
-          if (-not (Test-Path $lua_source_dir))
-          {
-            $color = (0x1b -as [char]) + "[36m";
-
-            Write-Host "Unable to find Lua source code directory: ${color}${lua_source_dir}";
-
-            exit 1;
-          }
-
-          $install_dir = Join-Path -Path "${{ runner.temp }}" -ChildPath "installed-lua-${{ matrix.lua-version }}";
-          
-          Add-Content "${{ github.env }}" "CC=clang";
-          Add-Content "${{ github.env }}" "LUA_SRC_DIR=${lua_source_dir}";
-          Add-Content "${{ github.env }}" "LUA_DIR=${install_dir}";
-      
-      - name: Build Lua ${{ matrix.lua-version }}
-        run: |
-          make -C "${{ env.LUA_SRC_DIR }}" `
-            linux `
-            "CC=${{ env.CC }}";
-      
-      - name: Install Lua ${{ matrix.lua-version }}, and set environment variables
-        run: |
-          make -C "${{ env.LUA_SRC_DIR }}" `
-            install `
-            "INSTALL_TOP=${{ env.LUA_DIR }}";
-
-          $lua_bindir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "bin";
-          $lua_incdir = Join-Path -Path "${{ env.LUA_DIR }}" -ChildPath "include";
-
-          Add-Content "${{ github.path }}" "${lua_bindir}";
-          Add-Content "${{ github.env }}" "LUA_INCDIR=${lua_incdir}";
-      
-      - name: Compile lua-uuid
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CC }} `
-            "-O2" `
-            "-Wall" `
-            "-c" `
-            "-fPIC" `
-            "-o" "src/lua-uuid.o" `
-            "-I${{ env.LUA_INCDIR }}" `
-            "-Isrc" `
-            "-I/usr/include/uuid" `
-            "-DLUA_UUID_BUILD_SHARED" `
-            "-DLUA_UUID_USE_LIBUUID" `
-            "src/lua-uuid.c";
- 
-      - name: Link lua-uuid
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CC }} "-shared" `
-            "-o" "lua-uuid.so" `
-            "src/lua-uuid.o" `
-            "-luuid";
- 
-      - name: Run samples
-        working-directory: lua-uuid
-        run: |
-          Get-ChildItem "samples" -Recurse -File |
-            Where-Object Extension -EQ ".lua" |
-            Select-Object -ExpandProperty FullName |
-            Foreach-Object {
-              $color = (0x1b -as [char]) + "[36m";
-
-              Write-Host "Running sample file: ${color}$_";
-
-              lua "$_";
-
-              if ($LASTEXITCODE -ne 0)
-              {
-                exit 1;
-              }
-            };
-  
-  build:
-    name: Build
+  test-minimal:
     runs-on: ${{ matrix.os }}
-    
-    defaults:
-      run:
-        shell: pwsh
-
     strategy:
+      fail-fast: false
       matrix:
-        
+
         lua-version:
           - 5.1
           - 5.2
           - 5.3
           - 5.4
+          - 5.5
           - luajit
+          - openresty
 
         os:
-          - windows-latest
           - ubuntu-latest
           - macos-latest
-        
+          - windows-latest
+
+        toolchain:
+          - msvc
+          - cc
+
         exclude:
+          - os: ubuntu-latest
+            toolchain: msvc
+
           - os: macos-latest
-            lua-version: luajit
-    
+            toolchain: msvc
+
     steps:
 
-      - name: Set environment variable to hold the rockspec name
-        run: |
-          if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "v${{ env.ROCKSPEC_VERSION }}" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
-          {
-            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec";
-          }
-          else
-          {
-            Add-Content "${{ github.env }}" "ROCKSPEC=${{ env.DEV_ROCKSPEC }}";
-          }
-
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: lua-uuid
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install libuuid-dev
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: sudo apt install -y uuid-dev
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt install libuuid-dev
 
-      - name: Setup MSVC dev-prompt
-        if: ${{ matrix.os == 'windows-latest' && matrix.lua-version != 'luajit' }}
-        uses: ilammy/msvc-dev-cmd@v1
-      
-      - name: Setup Lua
-        uses: luarocks/gh-actions-lua@v10
+      - name: Setup MSVC
+        uses: step-security/msvc-dev-cmd@22c98154b708dbd743e6f27a933cf6ceba3305c4 # v1.31.1
+        if: runner.os == 'Windows' && matrix.toolchain == 'msvc'
+
+      - name: Setup Lua and LuaRocks
+        uses: luau-project/setup-lua@59b296b674991ab17ba0550a40a5cda9dbe8ca38 # v2.0.4
         with:
-          luaVersion: ${{ matrix.lua-version }}
-      
-      - name: Setup LuaRocks
-        uses: luarocks/gh-actions-luarocks@v5
-      
-      - name: Lint rockspecs
-        working-directory: lua-uuid
+          lua-version: ${{ matrix.lua-version }}
+
+      - name: Set environment variable to hold the rockspec name (Unix)
+        if: runner.os != 'Windows'
         run: |
-          Get-ChildItem . -Recurse -File |
-            Where-Object Extension -Eq ".rockspec" |
-            Select-Object -ExpandProperty FullName |
-            Foreach-Object {
-              $color = (0x1b -as [char]) + "[36m";
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "ROCKSPEC=$(make -f Makefile.unix echo-rockspec)" >> $GITHUB_ENV
+          else
+            echo "ROCKSPEC=$(make -f Makefile.unix echo-dev-rockspec)" >> $GITHUB_ENV
+          fi
 
-              Write-Host "Linting rockspec: ${color}$_";
+      - name: Set environment variable to hold the rockspec name (Windows / MSVC)
+        if: runner.os == 'Windows' && matrix.toolchain == 'msvc'
+        shell: cmd
+        run: |
+          IF "${{ github.ref_type }}" EQU "tag" (
+            @FOR /F "TOKENS=* USEBACKQ" %%F IN (`nmake /F Makefile.win echo-rockspec`) ^
+            DO @ECHO ROCKSPEC=%%F>>%GITHUB_ENV%
+          ) ELSE (
+            @FOR /F "TOKENS=* USEBACKQ" %%F IN (`nmake /F Makefile.win echo-dev-rockspec`) ^
+            DO @ECHO ROCKSPEC=%%F>>%GITHUB_ENV%
+          )
 
-              luarocks lint "$_";
+      - name: Set environment variable to hold the rockspec name (Windows / MinGW-w64)
+        if: runner.os == 'Windows' && matrix.toolchain != 'msvc'
+        shell: cmd
+        run: |
+          IF "${{ github.ref_type }}" EQU "tag" (
+            @FOR /F "TOKENS=* USEBACKQ" %%F IN (`mingw32-make /F Makefile.win echo-rockspec`) ^
+            DO @ECHO ROCKSPEC=%%F>>%GITHUB_ENV%
+          ) ELSE (
+            @FOR /F "TOKENS=* USEBACKQ" %%F IN (`mingw32-make /F Makefile.win echo-dev-rockspec`) ^
+            DO @ECHO ROCKSPEC=%%F>>%GITHUB_ENV%
+          )
 
-              if ($LASTEXITCODE -ne 0)
-              {
-                exit 1;
-              }
+      - name: Lint (Unix)
+        if: runner.os != 'Windows'
+        run: luarocks lint "$ROCKSPEC"
+
+      - name: Lint (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: luarocks lint "%ROCKSPEC%"
+
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        run: luarocks make "$ROCKSPEC"
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: luarocks make "%ROCKSPEC%"
+
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          for f in samples/*.lua; do
+            echo -e "Running sample: \e[30m${f}";
+
+            lua "${f}" || {
+              echo "Failed to run the sample: ${f}";
+              exit 1;
             }
+          done
 
-      - name: Build lua-uuid
-        working-directory: lua-uuid
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
         run: |
-          $rockspec = Get-ChildItem . -Recurse -File |
-            Where-Object Name -EQ "${{ env.ROCKSPEC }}" |
-            Select-Object -ExpandProperty FullName -First 1;
-          
-          $color = (0x1b -as [char]) + "[36m";
-          Write-Host "Building rockspec file: ${color}${rockspec}";
-          
-          luarocks make $rockspec;
+          FOR %%F IN (samples\*.lua) DO (
+            ECHO Running sample "%%F"
+            lua -e "%%F"
 
-      - name: Run samples
-        working-directory: lua-uuid
-        run: |
-          Get-ChildItem "samples" -Recurse -File |
-            Where-Object Extension -EQ ".lua" |
-            Select-Object -ExpandProperty FullName |
-            Foreach-Object {
-              $color = (0x1b -as [char]) + "[36m";
-
-              Write-Host "Running sample file: ${color}$_";
-
-              lua "$_";
-
-              if ($LASTEXITCODE -ne 0)
-              {
-                exit 1;
-              }
-            };
-  
-  msys2-build:
-    name: MSYS2 Build
-    runs-on: windows-latest
-
-    defaults:
-      run:
-        shell: msys2 {0}
-
-    strategy:
-      matrix:
-        
-        MSYS2_CONFIG:
-          - { sys: mingw64, env: x86_64 }
-          - { sys: ucrt64, env: ucrt-x86_64 }
-          - { sys: clang64, env: clang-x86_64 }
-        
-        Lua:
-          - { version: '5.4', msys2-pkg-name: 'lua', msys2-lua-interpreter: 'lua' }
-          - { version: '5.3', msys2-pkg-name: 'lua53', msys2-lua-interpreter: 'lua5.3' }
-          - { version: '5.1', msys2-pkg-name: 'lua51', msys2-lua-interpreter: 'lua5.1' }
-          - { version: '5.1', msys2-pkg-name: 'luajit', msys2-lua-interpreter: 'luajit' }
-      
-    env:
-      LUA_INTERPRETER: /${{ matrix.MSYS2_CONFIG.sys }}/bin/${{ matrix.Lua.msys2-lua-interpreter }}
-
-    steps:
-
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{ matrix.MSYS2_CONFIG.sys }}
-          install: |
-            base-devel
-            git
-            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-cc
-            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-${{ matrix.Lua.msys2-pkg-name }}
-            mingw-w64-${{ matrix.MSYS2_CONFIG.env }}-lua-luarocks
-      
-      - name: Set environment variable to hold the rockspec name
-        run: |
-          if [[ "${{ github.repository }}" == "luau-project/lua-uuid" ]] && [[ "${{ github.ref_name }}" == "v${{ env.ROCKSPEC_VERSION }}" ]] && [[ "${{ github.ref }}" == "refs/tags/v${{ env.ROCKSPEC_VERSION }}" ]];
-          then
-            echo "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec" >> "${{ github.env }}";
-          else
-            echo "ROCKSPEC=${{ env.DEV_ROCKSPEC }}" >> "${{ github.env }}";
-          fi;
-      
-      - name: Configure LuaRocks
-        run: |
-          source /etc/makepkg_mingw.conf
-          echo "CC=/${{ matrix.MSYS2_CONFIG.sys }}/bin/${CC}" >> "${{ github.env }}"
-          echo "CFLAGS=${CFLAGS}" >> "${{ github.env }}"
-          luarocks config lua_version "${{ matrix.Lua.version }}"
-          luarocks config lua_dir "/${{ matrix.MSYS2_CONFIG.sys }}"
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: lua-uuid
-      
-      - name: Lint rockspecs
-        working-directory: lua-uuid
-        run: |
-          for rockspec in rockspecs/*.rockspec;
-          do
-            echo -e "Linting rockspec: \e[36m${rockspec}\e[0m";
-            luarocks lint "${rockspec}";
-          done;
-  
-      - name: Build lua-uuid
-        working-directory: lua-uuid
-        run: |
-          rockspec="rockspecs/${{ env.ROCKSPEC }}";
-          echo -e "Building rockspec: \e[36m${rockspec}\e[0m";
-
-          luarocks make ${rockspec};
-      
-      - name: Run samples
-        working-directory: lua-uuid
-        run: |
-          for sample in samples/*.lua;
-          do
-            echo -e "Running sample file: \e[36m${sample}\e[0m"
-
-            ${{ env.LUA_INTERPRETER }} $sample;
-          done;
-  
-  cygwin-build:
-    name: Cygwin Build
-    runs-on: windows-latest
-
-    env:
-      LUAROCKS_VERSION: 3.11.1
-      CYGWIN_NOWINPATH: 1
-      CHERE_INVOKING: 1
-      CYGWIN_INSTALL_DIR: C:\cygwin64
-
-    steps:
-      - name: Set environment variable to hold the rockspec name
-        run: |
-          if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "v${{ env.ROCKSPEC_VERSION }}" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
-          {
-            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec";
-          }
-          else
-          {
-            Add-Content "${{ github.env }}" "ROCKSPEC=${{ env.DEV_ROCKSPEC }}";
-          }
-    
-      - name: Override git autocrlf to input before checkout
-        run: git config --global core.autocrlf input
-      
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: lua-uuid
-      
-      - name: Setup Cygwin
-        uses: cygwin/cygwin-install-action@v5
-        with:
-          platform: x86_64
-          install-dir: ${{ env.CYGWIN_INSTALL_DIR }}
-          packages: |
-            coreutils,
-            wget,
-            gcc-g++,
-            make,
-            patch,
-            lua,
-            liblua-devel,
-            unzip,
-            libuuid-devel
-      
-      - name: Set environment variables to hold Cygwin applications for usage from pwsh
-        run: |
-          $bash = Join-Path -Path ${{ env.CYGWIN_INSTALL_DIR }} -ChildPath "bin" |
-            Join-Path -ChildPath "bash";
-          $cygpath = Join-Path -Path ${{ env.CYGWIN_INSTALL_DIR }} -ChildPath "bin" |
-            Join-Path -ChildPath "cygpath";
-          
-          Add-Content "${{ github.env }}" "CYGWIN_BASH=${bash}";
-          Add-Content "${{ github.env }}" "CYGWIN_CYGPATH=${cygpath}";
-
-      - name: Create a patch to apply to LuaRocks tarball
-        run: |
-          $cygwin_patch = "diff -Naur a/GNUmakefile b/GNUmakefile",                                                             
-          "--- a/GNUmakefile    2024-05-31 14:38:00.000000000 -0300",                                           
-          "+++ b/GNUmakefile    2025-02-05 18:48:47.060175879 -0300",                                           
-          "@@ -8,7 +8,7 @@",                                                                                    
-          " INSTALL_DATA = `$(INSTALL) -m 644",                                                                 
-          " BINARY_PLATFORM = unix",                                                                            
-          " ",                                                                                                  
-          "-SHEBANG = \#!`$(LUA)",                                                                              
-          "+SHEBANG = \#!/bin/env lua",                                                                         
-          " luarocksconfdir = `$(sysconfdir)/luarocks",                                                         
-          " luadir = `$(datarootdir)/lua/`$(LUA_VERSION)",                                                      
-          " builddir = ./build",                                                                                
-          "diff -Naur a/src/luarocks/core/cfg.lua b/src/luarocks/core/cfg.lua",                                 
-          "--- a/src/luarocks/core/cfg.lua  2024-05-31 14:38:00.000000000 -0300",                               
-          "+++ b/src/luarocks/core/cfg.lua  2025-02-05 18:46:26.771098947 -0300",                               
-          "@@ -413,13 +413,24 @@",                                                                              
-          "    end",                                                                                            
-          " ",                                                                                                  
-          "    if platforms.cygwin then",                                                                       
-          "-      defaults.lib_extension = ""so"" -- can be overridden in the config file for mingw builds",    
-          "+      defaults.lib_extension = ""dll"" -- can be overridden in the config file for mingw builds",   
-          "       defaults.arch = ""cygwin-""..target_cpu",                                                     
-          "       defaults.cmake_generator = ""Unix Makefiles""",                                               
-          "       defaults.variables.CC = ""echo -llua | xargs "" .. (os.getenv(""CC"") or ""gcc"")",           
-          "       defaults.variables.LD = ""echo -llua | xargs "" .. (os.getenv(""CC"") or ""gcc"")",           
-          "       defaults.variables.LIBFLAG = ""-shared""",                                                    
-          "       defaults.link_lua_explicitly = true",                                                         
-          "+      defaults.external_deps_patterns = {",                                                         
-          "+         bin = { ""?.exe"", ""?.bat"", ""?"" },",                                                   
-          "+         lib = { ""lib?.so"", ""lib?.so.*"", ""lib?.dll.a"", ""?.dll.a"",",                         
-          "+                 ""lib?.a"", ""lib?.dll"", ""?.dll"", ""?.lib"" },",                                
-          "+         include = { ""?.h"" }",                                                                    
-          "+      }",                                                                                           
-          "+      defaults.runtime_external_deps_patterns = {",                                                 
-          "+         bin = { ""?.exe"", ""?.bat"" },",                                                          
-          "+         lib = { ""lib?.so"", ""?.dll"", ""lib?.dll"" },",                                          
-          "+         include = { ""?.h"" }",                                                                    
-          "+      }",                                                                                           
-          "    end",                                                                                            
-          " ",                                                                                                  
-          "    if platforms.msys then",                                                                         
-          "";
-
-          $cygwin_patch_content = $cygwin_patch |
-            Join-String -Separator "`n";
-
-          $patch_path = Join-Path -Path "${{ runner.temp }}" -ChildPath "cygwin-luarocks-3.11.1.patch";
-          
-          Set-Content $patch_path $cygwin_patch_content -NoNewline;
-          
-          $cygwinpath_for_patch = ${{ env.CYGWIN_CYGPATH }} $patch_path;
-          Add-Content "${{ github.env }}" "CYGWIN_PATCH_FILENAME=${cygwinpath_for_patch}";
-          Add-Content "${{ github.env }}" "PWSH_CYGWIN_PATCH_FILENAME=${patch_path}";
-
-      - name: Download, configure and install LuaRocks
-        run: |
-          $color = (0x1b -as [char]) + "[36m";
-
-          Write-Host "Downloading LuaRocks from ${color}https://luarocks.org/releases/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz";          
-          ${{ env.CYGWIN_BASH }} -lc "wget https://luarocks.org/releases/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz -P/tmp";
-
-          Write-Host "Extracting LuaRocks tarball: ${color}/tmp/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz";
-          ${{ env.CYGWIN_BASH }} -lc "tar -C /tmp -xf /tmp/luarocks-${{ env.LUAROCKS_VERSION }}.tar.gz";
-
-          Write-Host "Patching LuaRocks with ${color}${{ env.CYGWIN_PATCH_FILENAME }}";
-          Write-Host "    which has the following content:";
-
-          $color_patch_content = (0x1b -as [char]) + "[33m";
-          Get-Content "${{ env.PWSH_CYGWIN_PATCH_FILENAME }}" | ForEach-Object { Write-Host "${color_patch_content}$_"; }
-          ${{ env.CYGWIN_BASH }} -lc "cd /tmp/luarocks-${{ env.LUAROCKS_VERSION }} && patch -Np1 -i ""${{ env.CYGWIN_PATCH_FILENAME }}""";
-
-          Write-Host "Configuring, making and installing LuaRocks at ${color}/usr";
-          ${{ env.CYGWIN_BASH }} -lc "cd /tmp/luarocks-${{ env.LUAROCKS_VERSION }} && ./configure --prefix=/usr && make && make install";
-
-          Write-Host "Writing a shell entry loading LuaRocks variables to file: ${color}/etc/profile.d/luarocks.sh";
-          ${{ env.CYGWIN_BASH }} -lc "echo 'eval `$(luarocks path)' > /etc/profile.d/luarocks.sh";
-      
-      - name: Lint rockspecs
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CYGWIN_BASH }} -lc "for rockspec in rockspecs/*.rockspec; do echo -e ""Linting rockspec: \e[36m`${rockspec}\e[0m""; luarocks lint ""`${rockspec}""; done";
-  
-      - name: Build lua-uuid
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CYGWIN_BASH }} -lc "rockspec=""rockspecs/${{ env.ROCKSPEC }}""; echo -e ""Building rockspec: \e[36m`${rockspec}\e[0m""; luarocks make `${rockspec};";
-
-      - name: Run samples
-        working-directory: lua-uuid
-        run: |
-          ${{ env.CYGWIN_BASH }} -lc "for sample in samples/*.lua; do echo -e ""Running sample file: \e[36m`${sample}\e[0m""; env lua `$sample; done;";
-      
-  upload-rockspec:
-    name: Upload rockspec
-    runs-on: ubuntu-latest
-    if: ${{ github.repository == 'luau-project/lua-uuid' && github.ref_type == 'tag' }}
-    needs:
-      - c89-build
-      - cplusplus-build
-      - clang-build
-      - build
-      - msys2-build
-      - cygwin-build
-
-    defaults:
-      run:
-        shell: pwsh
-
-    steps:
-
-      - name: Set environment variable to hold the rockspec name
-        run: |
-          if ("${{ github.repository }}" -eq "luau-project/lua-uuid" -and "${{ github.ref_name }}" -eq "v${{ env.ROCKSPEC_VERSION }}" -and "${{ github.ref }}" -eq "refs/tags/v${{ env.ROCKSPEC_VERSION }}")
-          {
-            Add-Content "${{ github.env }}" "ROCKSPEC=lua-uuid-${{ env.ROCKSPEC_VERSION }}-1.rockspec";
-          }
-          else
-          {
-            $color = (0x1b -as [char]) + "[31m";
-
-            Write-Host "${color}Invalid condition to upload rockspec";
-            exit 1;
-          }
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: lua-uuid
-
-      - name: Setup Lua
-        uses: luarocks/gh-actions-lua@v10
-      
-      - name: Setup LuaRocks
-        uses: luarocks/gh-actions-luarocks@v5
-
-      - name: Make sure that tags from GitHub and rockspec are equal
-        run: |
-          $rockspec = Get-ChildItem . -Recurse -File |
-            Where-Object Name -EQ "${{ env.ROCKSPEC }}" |
-            Select-Object -ExpandProperty FullName -First 1;
-          
-          $rockspec_tag = lua -e "dofile(arg[0]); io.write(source.tag);" -- "${rockspec}";
-          $github_tag = "${{ github.ref_name }}";
-
-          if ("${rockspec_tag}" -ne "${github_tag}")
-          {
-            $color_msg = (0x1b -as [char]) + "[31m";
-            $color_reset = (0x1b -as [char]) + "[0m";
-            $color_tag = (0x1b -as [char]) + "[33m";
-
-            Write-Host "${color_msg}Tag mismatch${color_reset}: GitHub tag (${color_tag}${github_tag}${color_reset}) != rockspec tag (${color_tag}${rockspec_tag}${color_reset})";
-            exit 1;
-          }
-
-      - name: Install LuaRocks dependencies to upload
-        run: |
-          sudo apt install -y uuid-dev libssl-dev;
-          luarocks install dkjson;
-          luarocks install luasocket;
-          luarocks install luasec;
-      
-      - name: Upload rockspec to LuaRocks
-        working-directory: lua-uuid
-        env:
-          UPLOAD_KEY: ${{ secrets.LUAROCKS_APIKEY }}
-        run: |
-          $rockspec = Get-ChildItem . -Recurse -File |
-              Where-Object Name -EQ "${{ env.ROCKSPEC }}" |
-              Select-Object -ExpandProperty FullName -First 1;
-          
-          $color = (0x1b -as [char]) + "[36m";
-          Write-Host "Uploading rockspec: ${color}${rockspec}";
-          
-          luarocks upload $rockspec "--temp-key=$env:UPLOAD_KEY" --skip-pack
+            IF %ERRORLEVEL% NEQ 0 (
+              ECHO Failed to run the sample: %%F
+              EXIT /B 1
+            )
+          )
