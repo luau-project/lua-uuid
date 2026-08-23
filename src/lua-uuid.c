@@ -34,6 +34,22 @@
 #include <uuid/uuid.h>
 #elif defined(LUA_UUID_USE_APPLE)
 #include <CoreFoundation/CFUUID.h>
+#define LUA_UUID_IS_NULL(u) (((u).byte0  == 0) && \
+    ((u).byte1  == 0) && \
+    ((u).byte2  == 0) && \
+    ((u).byte3  == 0) && \
+    ((u).byte4  == 0) && \
+    ((u).byte5  == 0) && \
+    ((u).byte6  == 0) && \
+    ((u).byte7  == 0) && \
+    ((u).byte8  == 0) && \
+    ((u).byte9  == 0) && \
+    ((u).byte10 == 0) && \
+    ((u).byte11 == 0) && \
+    ((u).byte12 == 0) && \
+    ((u).byte13 == 0) && \
+    ((u).byte14 == 0) && \
+    ((u).byte15 == 0))
 #else
 #error "Unknown configuration to build lua-uuid. \
         Please, compile with `-DLUA_UUID_USE_WIN32`, \
@@ -183,6 +199,8 @@ static int lua_uuid_parse(lua_State *L)
 
 #elif defined(LUA_UUID_USE_APPLE)
     CFUUIDRef data;
+    CFUUIDBytes uuid_bytes;
+    int is_nil_uuid_str = strcmp("00000000-0000-0000-0000-000000000000", s) == 0;
     CFStringRef strRef = CFStringCreateWithCString(NULL, s, kCFStringEncodingISOLatin1);
 
     if (strRef == NULL)
@@ -196,6 +214,12 @@ static int lua_uuid_parse(lua_State *L)
 
     if (data == NULL)
     {
+        return luaL_error(L, "Failed to parse UUID");
+    }
+
+    uuid_bytes = CFUUIDGetUUIDBytes(data);
+    if ((!is_nil_uuid_str) && LUA_UUID_IS_NULL(uuid_bytes)) {
+        CFRelease(data);
         return luaL_error(L, "Failed to parse UUID");
     }
 #endif
@@ -256,6 +280,8 @@ static int lua_uuid_tryparse(lua_State *L)
 
 #elif defined(LUA_UUID_USE_APPLE)
     CFUUIDRef data;
+    CFUUIDBytes uuid_bytes;
+    int is_nil_uuid_str = strcmp("00000000-0000-0000-0000-000000000000", s) == 0;
     CFStringRef strRef = CFStringCreateWithCString(NULL, s, kCFStringEncodingISOLatin1);
 
     if (strRef == NULL)
@@ -271,6 +297,14 @@ static int lua_uuid_tryparse(lua_State *L)
 
     if (data == NULL)
     {
+        lua_pushnil(L);
+        lua_pushstring(L, "Failed to parse UUID");
+        return 2;
+    }
+
+    uuid_bytes = CFUUIDGetUUIDBytes(data);
+    if ((!is_nil_uuid_str) && LUA_UUID_IS_NULL(uuid_bytes)) {
+        CFRelease(data);
         lua_pushnil(L);
         lua_pushstring(L, "Failed to parse UUID");
         return 2;
@@ -324,23 +358,7 @@ static int lua_uuid_is_nil(lua_State *L)
         return luaL_error(L, "Attempt to reuse a closed GUID / UUID instance.");
     }
     uuid_bytes = CFUUIDGetUUIDBytes(uuid->data);
-    
-    res = uuid_bytes.byte0  == 0 &&
-          uuid_bytes.byte1  == 0 &&
-          uuid_bytes.byte2  == 0 &&
-          uuid_bytes.byte3  == 0 &&
-          uuid_bytes.byte4  == 0 &&
-          uuid_bytes.byte5  == 0 &&
-          uuid_bytes.byte6  == 0 &&
-          uuid_bytes.byte7  == 0 &&
-          uuid_bytes.byte8  == 0 &&
-          uuid_bytes.byte9  == 0 &&
-          uuid_bytes.byte10 == 0 &&
-          uuid_bytes.byte11 == 0 &&
-          uuid_bytes.byte12 == 0 &&
-          uuid_bytes.byte13 == 0 &&
-          uuid_bytes.byte14 == 0 &&
-          uuid_bytes.byte15 == 0;
+    res = LUA_UUID_IS_NULL(uuid_bytes);
 #endif
 
     lua_pushboolean(L, res);
@@ -423,12 +441,10 @@ static int lua_uuid_equal(lua_State *L)
 #elif defined(LUA_UUID_USE_LIBUUID)
             int comparison = uuid_compare(left->data, right->data);
             lua_pushboolean(L, comparison == 0);
-            
 #elif defined(LUA_UUID_USE_APPLE)
 
             CFUUIDBytes uuid_bytes_left = CFUUIDGetUUIDBytes(left->data);
             CFUUIDBytes uuid_bytes_right = CFUUIDGetUUIDBytes(right->data);
-            
             int is_equal = uuid_bytes_left.byte0 == uuid_bytes_right.byte0 &&
                 uuid_bytes_left.byte1  == uuid_bytes_right.byte1 &&
                 uuid_bytes_left.byte2  == uuid_bytes_right.byte2 &&
