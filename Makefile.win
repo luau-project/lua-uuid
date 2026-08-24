@@ -135,7 +135,7 @@ MKDIRFLAGS =
 INSTALL = copy
 INSTALLFLAGS = /Y
 
-all: lib create-rockspecs
+all: lib
 
 lib: $(OUT)
 

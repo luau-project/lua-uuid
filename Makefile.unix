@@ -128,7 +128,7 @@ INSTALLPFLAG = -p
 INSTALLEXEFLAGS = -m 0755
 INSTALLFLAGS = $(INSTALLPFLAG) $(INSTALLEXEFLAGS)
 
-all: lib create-rockspecs
+all: lib
 
 lib: $(OUT)
 
