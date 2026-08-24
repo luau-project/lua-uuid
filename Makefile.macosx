@@ -26,14 +26,14 @@
 #                                                                                 #
 #=================================================================================#
 
-__EMPTY =
-CCONLY = -c
-CCOUT = -o $(__EMPTY)
-OBJ_EXTENSION = o
-LIB_EXTENSION = so
-CFLAGS_EXTRA = -DLUA_UUID_BUILD_SHARED -DLUA_UUID_USE_APPLE
-LIBFLAG_EXTRA = -framework CoreFoundation
+# The intent of this Makefile
+# is to build and install `lua-uuid`
+# through LuaRocks, using variables
+# defined by LuaRocks.
+# For a feature-complete Makefile,
+# take a look at `Makefile.unix`.
 
+__EMPTY =
 LUA_DIR = /usr/local
 LUA_INCDIR = $(LUA_DIR)/include
 
@@ -41,11 +41,30 @@ LUA_VERSION = 5.1
 INSTALL_PREFIX = /usr/local
 INSTALL_LIBDIR = $(INSTALL_PREFIX)/lib/lua/$(LUA_VERSION)
 
+CC = cc
+CCONLY = -c
+CCINCFLAG = -I
+CCINCLUDES = $(CCINCFLAG)$(LUA_INCDIR)
+CCOUT = -o $(__EMPTY)
+CFLAGS_EXTRA = -DLUA_UUID_BUILD_SHARED -DLUA_UUID_USE_APPLE
+LIBFLAG_EXTRA = -framework CoreFoundation
+
+# Usually, there is no need
+# to edit below this line
+
+OBJ_EXTENSION = o
+LIB_EXTENSION = so
 LUA_UUID_SHARED_LIB = src/lua-uuid.$(LIB_EXTENSION)
 LUA_UUID_SHARED_OBJ = src/lua-uuid.$(OBJ_EXTENSION)
+LUA_UUID_SHARED_SRC = src/lua-uuid.c
 
-INSTALLPROG = install
-INSTALLFLAGS = -p -m 0755
+INSTALL = install
+INSTALLPFLAG = -p
+INSTALLEXEFLAGS = -m 0755
+INSTALLFLAGS = $(INSTALLPFLAG) $(INSTALLEXEFLAGS)
+
+ENV = env
+LUA = lua
 
 RM = rm
 RMFLAGS = -f
@@ -59,12 +78,12 @@ shared: $(LUA_UUID_SHARED_LIB)
 $(LUA_UUID_SHARED_LIB): $(LUA_UUID_SHARED_OBJ)
 	$(CC) $(LIBFLAG) $(CCOUT)$(LUA_UUID_SHARED_LIB) $(LUA_UUID_SHARED_OBJ) $(LIBFLAG_EXTRA)
 
-src/lua-uuid.$(OBJ_EXTENSION): src/lua-uuid.c
-	$(CC) $(CCONLY) $(CFLAGS_EXTRA) $(CFLAGS) -I$(LUA_INCDIR) $(CCOUT)src/lua-uuid.$(OBJ_EXTENSION) src/lua-uuid.c
+$(LUA_UUID_SHARED_OBJ): $(LUA_UUID_SHARED_SRC)
+	$(CC) $(CCONLY) $(CFLAGS_EXTRA) $(CFLAGS) $(CCINCLUDES) $(CCOUT)$(LUA_UUID_SHARED_OBJ) $(LUA_UUID_SHARED_SRC)
 
 .PHONY: install
-install: $(LUA_UUID_SHARED_LIB)
-	$(INSTALLPROG) $(INSTALLFLAGS) $(LUA_UUID_SHARED_LIB) $(INSTALL_LIBDIR)
+install:
+	$(INSTALL) $(INSTALLFLAGS) $(LUA_UUID_SHARED_LIB) $(INSTALL_LIBDIR)
 
 .PHONY: clean-obj
 clean-obj:
