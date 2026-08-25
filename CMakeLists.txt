@@ -191,7 +191,8 @@ IF (LUA_FOUND)
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-        IF (NOT LUA_VERSION_CONTENT MATCHES "^Lua .* PUC-Rio")
+        IF (NOT ("${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}" STREQUAL "5.1") AND
+            NOT LUA_VERSION_CONTENT MATCHES "^Lua .* PUC-Rio")
             MESSAGE(FATAL_ERROR "Failed to find a working Lua interpreter")
         ENDIF()
 
