@@ -32,7 +32,6 @@
     * [__eq](#__eq)
     * [__tostring](#__tostring)
 * [Change log](#change-log)
-* [Future works](#future-works)
 
 ## Installation
 
@@ -278,7 +277,3 @@ print("lua-uuid is version " .. uuid.version)
 ## History
 
 Browse the [changelog](./CHANGELOG.md)
-
-## Future works
-
-* Add CMake as build system
