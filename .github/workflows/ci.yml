@@ -157,7 +157,7 @@ jobs:
           - openresty
 
         os:
-          - ubuntu-latest
+          - ubuntu-26.04
           - macos-latest
           - windows-latest
 
@@ -166,7 +166,7 @@ jobs:
           - cc
 
         exclude:
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             toolchain: msvc
 
           - os: macos-latest
