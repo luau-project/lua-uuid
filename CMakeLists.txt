@@ -159,7 +159,7 @@ ELSE()
     ENDIF()
 ENDIF()
 
-FIND_PACKAGE(Lua ${LUA_VERSION} QUIET NO_DEFAULT_PATH)
+FIND_PACKAGE(Lua ${LUA_VERSION} QUIET)
 
 IF (LUA_FOUND)
     MESSAGE(STATUS "Found Lua headers at `${LUA_INCLUDE_DIR}'")
@@ -177,6 +177,7 @@ IF (LUA_FOUND)
                 "lua-${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
                 "lua-${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
                 "lua"
+            HINTS ENV LUA_DIR
             OPTIONAL
         )
 
@@ -208,6 +209,7 @@ ELSE()
     FOREACH(LUAJIT_SUFFIX "-2.1" "" "-2.0")
         FIND_PATH(LUA_INCLUDE_DIR
             NAMES "luajit.h"
+            HINTS ENV LUA_DIR
             PATH_SUFFIXES "luajit${LUAJIT_SUFFIX}"
         )
 
@@ -233,11 +235,13 @@ ELSE()
         IF (MINGW)
             FIND_FILE(LUA_LIBRARIES
                 NAMES "lua51.dll"
+                HINTS ENV LUA_DIR
                 OPTIONAL
             )
         ELSE()
             FIND_LIBRARY(LUA_LIBRARIES
                 NAMES "lua51"
+                HINTS ENV LUA_DIR
                 OPTIONAL
             )
         ENDIF()
@@ -254,6 +258,7 @@ ELSE()
     IF (LUA_UUID_ENABLE_TESTS)
         FIND_PROGRAM(LUA_PROG
             NAMES "luajit" "lua"
+            HINTS ENV LUA_DIR
             OPTIONAL
         )
 
