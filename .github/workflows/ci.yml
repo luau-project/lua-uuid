@@ -201,7 +201,7 @@ jobs:
             -B build
 
       - name: Configure (Windows)
-        if: runner.os != 'Windows'
+        if: runner.os == 'Windows'
         shell: cmd
         run: |
           IF "${{ matrix.toolchain }}" EQU "msvc" (
