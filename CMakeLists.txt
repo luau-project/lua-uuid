@@ -32,11 +32,9 @@
 #                                #
 # LUA_VERSION (STRING)           #
 #   Description:                 #
-#     The version of PUC-Lua.    #
-#   Remarks:                     #
-#     Do NOT set this field for  #
-#     LuaJIT / OpenResty.        #
+#     The version of Lua.        #
 #   e.g.:                        #
+#     * luajit                   #
 #     * 5.1                      #
 #     * 5.2.4                    #
 #     * 5.4.8                    #
@@ -159,54 +157,9 @@ ELSE()
     ENDIF()
 ENDIF()
 
-FIND_PACKAGE(Lua ${LUA_VERSION} QUIET)
-
-IF (LUA_FOUND)
-    MESSAGE(STATUS "Found Lua headers at `${LUA_INCLUDE_DIR}'")
-    TARGET_INCLUDE_DIRECTORIES(lua-uuid PRIVATE ${LUA_INCLUDE_DIR})
-    IF (WIN32)
-        MESSAGE(STATUS "Found the Lua libraries at `${LUA_LIBRARIES}'")
-        TARGET_LINK_LIBRARIES(lua-uuid PRIVATE ${LUA_LIBRARIES})
-    ENDIF()
-
-    IF (LUA_UUID_ENABLE_TESTS)
-        FIND_PROGRAM(LUA_PROG
-            NAMES
-                "lua${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
-                "lua${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
-                "lua-${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
-                "lua-${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
-                "lua"
-            HINTS ENV LUA_DIR
-            OPTIONAL
-        )
-
-        IF (NOT LUA_PROG)
-            MESSAGE(FATAL_ERROR "Failed to find Lua ${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
-        ENDIF()
-
-        execute_process(
-            COMMAND ${LUA_PROG} "-v"
-            OUTPUT_VARIABLE LUA_VERSION_CONTENT
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-
-        IF (NOT ("${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}" STREQUAL "5.1") AND
-            NOT LUA_VERSION_CONTENT MATCHES "^Lua .* PUC-Rio")
-            MESSAGE(FATAL_ERROR "Failed to find a working Lua interpreter")
-        ENDIF()
-
-        execute_process(
-            COMMAND ${LUA_PROG} "-e" "print(_VERSION:sub(5))"
-            OUTPUT_VARIABLE LUA_ABI_CONTENT
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-
-        IF (NOT LUA_ABI_CONTENT STREQUAL "${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
-            MESSAGE(FATAL_ERROR "Failed to find a working Lua interpreter")
-        ENDIF()
-    ENDIF()
-ELSE()
+# Macro used in multiple locations
+# to setup lua-uuid for LuaJIT
+MACRO(__SETUP_LUA_UUID_FOR_LUAJIT)
     FOREACH(LUAJIT_SUFFIX "-2.1" "" "-2.0")
         FIND_PATH(LUA_INCLUDE_DIR
             NAMES "luajit.h"
@@ -287,6 +240,61 @@ ELSE()
             MESSAGE(FATAL_ERROR "Failed to find a working LuaJIT interpreter")
         ENDIF()
     ENDIF()
+ENDMACRO()
+
+IF ("${LUA_VERSION}" MATCHES "^luajit")
+    __SETUP_LUA_UUID_FOR_LUAJIT()
+ELSE()
+    FIND_PACKAGE(Lua ${LUA_VERSION} QUIET)
+
+    IF (LUA_FOUND)
+        MESSAGE(STATUS "Found Lua headers at `${LUA_INCLUDE_DIR}'")
+        TARGET_INCLUDE_DIRECTORIES(lua-uuid PRIVATE ${LUA_INCLUDE_DIR})
+        IF (WIN32)
+            MESSAGE(STATUS "Found the Lua libraries at `${LUA_LIBRARIES}'")
+            TARGET_LINK_LIBRARIES(lua-uuid PRIVATE ${LUA_LIBRARIES})
+        ENDIF()
+
+        IF (LUA_UUID_ENABLE_TESTS)
+            FIND_PROGRAM(LUA_PROG
+                NAMES
+                    "lua${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
+                    "lua${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
+                    "lua-${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
+                    "lua-${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
+                    "lua"
+                HINTS ENV LUA_DIR
+                OPTIONAL
+            )
+
+            IF (NOT LUA_PROG)
+                MESSAGE(FATAL_ERROR "Failed to find Lua ${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
+            ENDIF()
+
+            execute_process(
+                COMMAND ${LUA_PROG} "-v"
+                OUTPUT_VARIABLE LUA_VERSION_CONTENT
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+
+            IF (NOT ("${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}" STREQUAL "5.1") AND
+                NOT LUA_VERSION_CONTENT MATCHES "^Lua .* PUC-Rio")
+                MESSAGE(FATAL_ERROR "Failed to find a working Lua interpreter")
+            ENDIF()
+
+            execute_process(
+                COMMAND ${LUA_PROG} "-e" "print(_VERSION:sub(5))"
+                OUTPUT_VARIABLE LUA_ABI_CONTENT
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+
+            IF (NOT LUA_ABI_CONTENT STREQUAL "${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
+                MESSAGE(FATAL_ERROR "Failed to find a working Lua interpreter")
+            ENDIF()
+        ENDIF()
+    ELSE()
+        __SETUP_LUA_UUID_FOR_LUAJIT()
+    ENDIF()
 ENDIF()
 
 IF (LUAJIT_ABI_CONTENT STREQUAL "5.1")
@@ -307,16 +315,8 @@ IF (INSTALL_CMOD)
 
     IF (WIN32)
         SET(_INSTALL_KIND "RUNTIME")
-
-        # INSTALL(TARGETS lua-uuid
-        #     RUNTIME DESTINATION "${INSTALL_CMOD}"
-        # )
     ELSE()
         SET(_INSTALL_KIND "LIBRARY")
-
-        # INSTALL(TARGETS lua-uuid
-        #     LIBRARY DESTINATION "${INSTALL_CMOD}"
-        # )
     ENDIF()
 ELSE()
 
@@ -325,32 +325,16 @@ ELSE()
     IF (MSYS OR CYGWIN)
         SET(_INSTALL_KIND "RUNTIME")
         SET(_INSTALL_CMOD "${CMAKE_INSTALL_LIBDIR}/lua/${_LUA_ABI}")
-
-        # INSTALL(TARGETS lua-uuid
-        #     RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/lua/${_LUA_ABI}"
-        # )
     ELSEIF (WIN32)
         SET(_INSTALL_KIND "RUNTIME")
         IF ("${_LUA_ABI}" STREQUAL "5.1" OR "${_LUA_ABI}" STREQUAL "5.2")
             SET(_INSTALL_CMOD "${CMAKE_INSTALL_BINDIR}")
-
-            # INSTALL(TARGETS lua-uuid
-            #     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-            # )
         ELSE()
             SET(_INSTALL_CMOD "${CMAKE_INSTALL_LIBDIR}/lua/${_LUA_ABI}")
-
-            # INSTALL(TARGETS lua-uuid
-            #     RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/lua/${_LUA_ABI}"
-            # )
         ENDIF()
     ELSE()
         SET(_INSTALL_KIND "LIBRARY")
         SET(_INSTALL_CMOD "${CMAKE_INSTALL_LIBDIR}/lua/${_LUA_ABI}")
-
-        # INSTALL(TARGETS lua-uuid
-        #     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/lua/${_LUA_ABI}"
-        # )
     ENDIF()
 ENDIF()
 
