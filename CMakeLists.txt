@@ -115,6 +115,7 @@ SET_TARGET_PROPERTIES(lua-uuid
 TARGET_COMPILE_DEFINITIONS(lua-uuid PRIVATE "LUA_UUID_BUILD_SHARED")
 
 IF (WIN32)
+    TARGET_SOURCES(lua-uuid PRIVATE "${PROJECT_SOURCE_DIR}/lua-uuid.def")
     TARGET_COMPILE_DEFINITIONS(lua-uuid PRIVATE "LUA_UUID_USE_WIN32")
     TARGET_LINK_LIBRARIES(lua-uuid PRIVATE "rpcrt4")
 ELSEIF (APPLE)
@@ -189,6 +190,8 @@ MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
             EXISTS "${LUA_INCLUDE_DIR}/luajit.h")
             MESSAGE(STATUS "Found LuaJIT headers at `${LUA_INCLUDE_DIR}'")
             BREAK()
+        ELSE()
+            UNSET(LUA_INCLUDE_DIR)
         ENDIF()
     ENDFOREACH()
 
@@ -219,7 +222,6 @@ MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
         ELSE()
             MESSAGE(FATAL_ERROR "Failed to find import libraries for LuaJIT")
         ENDIF()
-
     ENDIF()
 
     IF (LUA_UUID_ENABLE_TESTS)
@@ -233,7 +235,7 @@ MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
             MESSAGE(FATAL_ERROR "Failed to find LuaJIT")
         ENDIF()
 
-        execute_process(
+        EXECUTE_PROCESS(
             COMMAND ${_LUA_PROG} "-v"
             OUTPUT_VARIABLE _LUAJIT_VERSION_CONTENT
             OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -243,7 +245,7 @@ MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
             MESSAGE(FATAL_ERROR "Failed to find a working LuaJIT interpreter")
         ENDIF()
 
-        execute_process(
+        EXECUTE_PROCESS(
             COMMAND ${_LUA_PROG} "-e" "print(_VERSION:sub(5))"
             OUTPUT_VARIABLE _LUAJIT_ABI_CONTENT
             OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -288,7 +290,7 @@ ELSE()
                 MESSAGE(FATAL_ERROR "Failed to find Lua ${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
             ENDIF()
 
-            execute_process(
+            EXECUTE_PROCESS(
                 COMMAND ${_LUA_PROG} "-v"
                 OUTPUT_VARIABLE LUA_VERSION_CONTENT
                 OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -299,7 +301,7 @@ ELSE()
                 MESSAGE(FATAL_ERROR "Failed to find a working Lua interpreter")
             ENDIF()
 
-            execute_process(
+            EXECUTE_PROCESS(
                 COMMAND ${_LUA_PROG} "-e" "print(_VERSION:sub(5))"
                 OUTPUT_VARIABLE LUA_ABI_CONTENT
                 OUTPUT_STRIP_TRAILING_WHITESPACE
