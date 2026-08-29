@@ -60,10 +60,14 @@ lib:
 install:
 	$(MAKE) $(MAKEFILE_COMMON_FLAGS) "INSTALL_CMOD=$(INSTALL_LIBDIR)" install
 
+.PHONY: test
+test:
+	$(MAKE) $(MAKEFILE_COMMON_FLAGS) test
+
 .PHONY: clean
 clean:
 	$(MAKE) $(MAKEFILE_COMMON_FLAGS) clean
 
-.PHONY: test
-test:
-	$(MAKE) $(MAKEFILE_COMMON_FLAGS) test
+.PHONY: very-clean
+very-clean:
+	$(MAKE) $(MAKEFILE_COMMON_FLAGS) very-clean
