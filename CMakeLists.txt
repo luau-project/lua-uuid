@@ -39,8 +39,12 @@
 #     * 5.1.5                    #
 #     * 5.2                      #
 #     * 5.2.4                    #
+#     * 5.3                      #
+#     * 5.3.6                    #
 #     * 5.4                      #
 #     * 5.4.9                    #
+#     * 5.5                      #
+#     * 5.5.1                    #
 #   Default value: (UNDEFINED)   #
 #                                #
 # LUA_UUID_ENABLE_TESTS (ON/OFF) #
@@ -339,7 +343,7 @@ IF (INSTALL_CMOD)
     ENDIF()
 ELSE()
 
-    include(GNUInstallDirs)
+    INCLUDE(GNUInstallDirs)
 
     IF (MSYS OR CYGWIN)
         SET(_INSTALL_KIND "RUNTIME")
