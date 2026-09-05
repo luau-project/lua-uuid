@@ -1,6 +1,6 @@
 # Build lua-uuid on Windows
 
-This page details different methods to build `lua-uuid` directly from the source code on Windows.
+This page details how to build `lua-uuid` directly from the source code on Windows using `cmake`.
 
 ## Table of Contents
 
@@ -15,13 +15,11 @@ This page details different methods to build `lua-uuid` directly from the source
 
 * CMake
 
-Since `v0.1.0`, it is possible to employ `cmake` to build `lua-uuid` directly from the source code, out of `LuaRocks`.
+    Since `v0.1.0`, it is possible to employ `cmake` to build `lua-uuid` directly from the source code, out of `LuaRocks`. From now on, we are going to assume that `cmake` is installed in the system.
 
 > [!NOTE]
 > 
 > **Install CMake**: In order to use this method, the `cmake` tool is required. Visit the website [https://cmake.org/](https://cmake.org/), download and install it.
-
-From now on, we are going to assume that `cmake` is installed in the system.
 
 ## Build and Install
 
@@ -55,7 +53,7 @@ From now on, we are going to assume that `cmake` is installed in the system.
 
 > [!TIP]
 > 
-> * Change `C:\lua-uuid` below to the destination directory;
+> * Change `C:\lua-uuid` above to the destination directory;
 > * In case multiple Lua versions are installed in the system, use `-DLUA_VERSION=5.1`, ..., `-DLUA_VERSION=5.5` to select the appropriate version for PUC-Lua or `-DLUA_VERSION=luajit` for LuaJIT.
 
 5. Build `lua-uuid`:
