@@ -46,6 +46,9 @@ jobs:
           - os: macos-latest
             toolchain: msvc
 
+    env:
+      TOOLCHAIN: ${{ matrix.toolchain }}
+
     steps:
 
       - name: Checkout
@@ -60,14 +63,14 @@ jobs:
         if: runner.os == 'Windows' && matrix.toolchain == 'msvc'
 
       - name: Setup Lua and LuaRocks
-        uses: luau-project/setup-lua@59b296b674991ab17ba0550a40a5cda9dbe8ca38 # v2.0.4
+        uses: luau-project/setup-lua@ebdc724769a3976b27abe70d93a730aede440ba9 # v2.0.8
         with:
           lua-version: ${{ matrix.lua-version }}
 
       - name: Set environment variable to hold the rockspec name (Unix)
         if: runner.os != 'Windows'
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             echo "ROCKSPEC=$(make -f Makefile.unix echo-rockspec)" >> $GITHUB_ENV
           else
             echo "ROCKSPEC=$(make -f Makefile.unix echo-dev-rockspec)" >> $GITHUB_ENV
@@ -77,18 +80,18 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          IF "${{ matrix.toolchain }}" EQU "msvc" (
+          IF "%TOOLCHAIN%" EQU "msvc" (
             SET "MAKE_PROG=nmake"
             SET "MAKE_FILE_FLAG=/F"
-          ) ELSE IF "${{ matrix.toolchain }}" EQU "cc" (
+          ) ELSE IF "%TOOLCHAIN%" EQU "cc" (
             SET "MAKE_PROG=mingw32-make"
             SET "MAKE_FILE_FLAG=-f"
           ) ELSE (
-            ECHO Unknown matrix.toolchain: ${{ matrix.toolchain }}
+            ECHO Unknown matrix.toolchain: %TOOLCHAIN%
             EXIT /B 1
           )
 
-          IF "${{ github.ref_type }}" EQU "tag" (
+          IF "%GITHUB_REF_TYPE%" EQU "tag" (
             SET "MAKE_TARGET=echo-rockspec"
           ) ELSE (
             SET "MAKE_TARGET=echo-dev-rockspec"
@@ -172,6 +175,9 @@ jobs:
           - os: macos-latest
             toolchain: msvc
 
+    env:
+      TOOLCHAIN: ${{ matrix.toolchain }}
+
     steps:
 
       - name: Checkout
@@ -186,7 +192,7 @@ jobs:
         if: runner.os == 'Windows' && matrix.toolchain == 'msvc'
 
       - name: Setup Lua and LuaRocks
-        uses: luau-project/setup-lua@59b296b674991ab17ba0550a40a5cda9dbe8ca38 # v2.0.4
+        uses: luau-project/setup-lua@ebdc724769a3976b27abe70d93a730aede440ba9 # v2.0.8
         with:
           lua-version: ${{ matrix.lua-version }}
 
@@ -196,7 +202,7 @@ jobs:
           cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DLUA_UUID_ENABLE_TESTS=ON \
-            --install-prefix "${{ github.workspace }}/.lua" \
+            --install-prefix "$GITHUB_WORKSPACE/.lua" \
             -S . \
             -B build
 
@@ -204,12 +210,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          IF "${{ matrix.toolchain }}" EQU "msvc" (
+          IF "%TOOLCHAIN%" EQU "msvc" (
             SET "CMAKE_GENERATOR=NMake Makefiles"
-          ) ELSE IF "${{ matrix.toolchain }}" EQU "cc" (
+          ) ELSE IF "%TOOLCHAIN%" EQU "cc" (
             SET "CMAKE_GENERATOR=MinGW Makefiles"
           ) ELSE (
-            ECHO Unknown matrix.toolchain: ${{ matrix.toolchain }}
+            ECHO Unknown matrix.toolchain: %TOOLCHAIN%
             EXIT /B 1
           )
 
@@ -217,7 +223,7 @@ jobs:
             -G "%CMAKE_GENERATOR%" ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DLUA_UUID_ENABLE_TESTS=ON ^
-            --install-prefix "${{ github.workspace }}/.lua" ^
+            --install-prefix "%GITHUB_WORKSPACE%\.lua" ^
             -S . ^
             -B build
 
