@@ -67,8 +67,8 @@ luarocks install lua-uuid
 
 In case `LuaRocks` is not an option, check the guides:
 
-* [Building on Windows](./BUILDING-WINDOWS.md) or
-* [Building on Unix](./BUILDING-UNIX.md).
+* [Build on Windows](./BUILDING-WINDOWS.md) or
+* [Build on Unix](./BUILDING-UNIX.md).
 
 ## Usage
 

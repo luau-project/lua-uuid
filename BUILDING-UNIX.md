@@ -1,4 +1,4 @@
-# Building lua-uuid
+# Build lua-uuid on Unix
 
 This page details different methods to build `lua-uuid` directly from the source code.
 
@@ -9,7 +9,7 @@ This page details different methods to build `lua-uuid` directly from the source
 
 ## Prerequisites
 
-* Lua (&gt; 5.1) or LuaJIT must be installed in the system;
+* Lua (&ge; 5.1) or LuaJIT must be installed in the system;
 
 * On macOS, there is no need to install any external libraries. On Linux, BSD and other Unix systems, use the package manager offered by the distribution to install the development package for `libuuid`.
 
@@ -29,9 +29,9 @@ From now on, we are going to assume that `cmake` is installed in the system.
 
 2. Configure `lua-uuid` for the Lua version installed:
 
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release -B build
-```
+    ```bash
+    cmake -DCMAKE_BUILD_TYPE=Release -B build
+    ```
 
 > [!TIP]
 > 
@@ -39,18 +39,18 @@ cmake -DCMAKE_BUILD_TYPE=Release -B build
 
 3. Build `lua-uuid`:
 
-```bash
-cmake --build build --config Release
-```
+    ```bash
+    cmake --build build --config Release
+    ```
 
 4. Test `lua-uuid`:
 
-```bash
-ctest --test-dir build -C Release
-```
+    ```bash
+    ctest --test-dir build -C Release
+    ```
 
 5. Install `lua-uuid` (_you may need to use **sudo**_):
 
-```bash
-cmake --install build --config Release
-```
+    ```bash
+    cmake --install build --config Release
+    ```

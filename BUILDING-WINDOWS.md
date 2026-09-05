@@ -1,4 +1,4 @@
-# Building lua-uuid
+# Build lua-uuid on Windows
 
 This page details different methods to build `lua-uuid` directly from the source code on Windows.
 
@@ -19,7 +19,7 @@ Since `v0.1.0`, it is possible to employ `cmake` to build `lua-uuid` directly fr
 
 > [!NOTE]
 > 
-> **Install CMake**: In order to use this method, the `cmake` tool is required. Visit the website [https://cmake.org/](https://cmake.org/), download and install it. On Unix distributions, use the package manager of the system to install it.
+> **Install CMake**: In order to use this method, the `cmake` tool is required. Visit the website [https://cmake.org/](https://cmake.org/), download and install it.
 
 From now on, we are going to assume that `cmake` is installed in the system.
 
@@ -29,15 +29,15 @@ From now on, we are going to assume that `cmake` is installed in the system.
 
 2. Then, change directory to `lua-uuid` directory:
 
-```batch
-cd lua-uuid
-```
+    ```batch
+    cd lua-uuid
+    ```
 
 3. Set an environment variable (`CMAKE_PREFIX_PATH`) to hold the directory of Lua (*assumed to be at `C:\Program Files\Lua`*):
 
-```batch
-set "CMAKE_PREFIX_PATH=C:\Program Files\Lua"
-```
+    ```batch
+    set "CMAKE_PREFIX_PATH=C:\Program Files\Lua"
+    ```
 
 4. Configure `lua-uuid` for the Lua version installed:
 
@@ -60,21 +60,21 @@ set "CMAKE_PREFIX_PATH=C:\Program Files\Lua"
 
 5. Build `lua-uuid`:
 
-```bash
-cmake --build build --config Release
-```
+    ```batch
+    cmake --build build --config Release
+    ```
 
 6. Test `lua-uuid`:
 
-```bash
-ctest --test-dir build -C Release
-```
+    ```batch
+    ctest --test-dir build -C Release
+    ```
 
 7. Install `lua-uuid`:
 
-```bash
-cmake --install build --config Release
-```
+    ```batch
+    cmake --install build --config Release
+    ```
 
 > [!NOTE]
 > 
