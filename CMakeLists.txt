@@ -175,89 +175,289 @@ ELSE()
     ENDIF()
 ENDIF()
 
-# Macro used in multiple locations
-# to setup lua-uuid for LuaJIT
-MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
+# Helper function to find LuaJIT
+FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
     FOREACH(LUAJIT_SUFFIX "-2.1" "" "-2.0")
-        FIND_PATH(LUA_INCLUDE_DIR
+        FIND_PATH(_LUAJIT_INCLUDE_DIR
             NAMES "luajit.h"
-            HINTS ENV LUA_DIR
+            HINTS ENV LUAJIT_DIR
+                  ENV LUA_DIR
             PATH_SUFFIXES "luajit${LUAJIT_SUFFIX}"
         )
 
-        IF (LUA_INCLUDE_DIR AND
-            EXISTS "${LUA_INCLUDE_DIR}/lua.h" AND
-            EXISTS "${LUA_INCLUDE_DIR}/luaconf.h" AND
-            EXISTS "${LUA_INCLUDE_DIR}/lualib.h" AND
-            EXISTS "${LUA_INCLUDE_DIR}/lauxlib.h" AND
-            EXISTS "${LUA_INCLUDE_DIR}/lua.hpp" AND
-            EXISTS "${LUA_INCLUDE_DIR}/luajit.h")
-            MESSAGE(STATUS "Found LuaJIT headers at `${LUA_INCLUDE_DIR}'")
+        IF (_LUAJIT_INCLUDE_DIR AND
+            EXISTS "${_LUAJIT_INCLUDE_DIR}/lua.h" AND
+            EXISTS "${_LUAJIT_INCLUDE_DIR}/luaconf.h" AND
+            EXISTS "${_LUAJIT_INCLUDE_DIR}/lualib.h" AND
+            EXISTS "${_LUAJIT_INCLUDE_DIR}/lauxlib.h" AND
+            EXISTS "${_LUAJIT_INCLUDE_DIR}/lua.hpp" AND
+            EXISTS "${_LUAJIT_INCLUDE_DIR}/luajit.h")
             BREAK()
         ELSE()
-            UNSET(LUA_INCLUDE_DIR)
+            UNSET(_LUAJIT_INCLUDE_DIR)
         ENDIF()
     ENDFOREACH()
 
-    IF (NOT LUA_INCLUDE_DIR)
-        MESSAGE(FATAL_ERROR "Failed to find Lua or LuaJIT")
+    IF (NOT _LUAJIT_INCLUDE_DIR)
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            SET(${ERROR_MSG_VAR} "Failed to find LuaJIT headers" PARENT_SCOPE)
+        ENDIF()
+        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+                ${ERROR_MSG_VAR}
+            )
+        ELSE()
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+            )
+        ENDIF()
+        RETURN()
     ENDIF()
-
-    TARGET_INCLUDE_DIRECTORIES(lua-uuid PRIVATE ${LUA_INCLUDE_DIR})
 
     IF (WIN32)
         IF (MINGW)
-            FIND_FILE(LUA_LIBRARIES
+            FIND_FILE(_LUAJIT_LIBRARIES
                 NAMES "lua51.dll"
-                HINTS ENV LUA_DIR
+                HINTS ENV LUAJIT_DIR
+                      ENV LUA_DIR
                 OPTIONAL
             )
         ELSE()
-            FIND_LIBRARY(LUA_LIBRARIES
+            FIND_LIBRARY(_LUAJIT_LIBRARIES
                 NAMES "lua51"
-                HINTS ENV LUA_DIR
+                HINTS ENV LUAJIT_DIR
+                      ENV LUA_DIR
                 OPTIONAL
             )
         ENDIF()
 
-        IF (LUA_LIBRARIES)
-            MESSAGE(STATUS "Found import libraries for LuaJIT at `${LUA_LIBRARIES}'")
-            TARGET_LINK_LIBRARIES(lua-uuid PRIVATE ${LUA_LIBRARIES})
-        ELSE()
-            MESSAGE(FATAL_ERROR "Failed to find import libraries for LuaJIT")
+        IF (NOT _LUAJIT_LIBRARIES)
+            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+                SET(${ERROR_MSG_VAR} "Failed to find import libraries for LuaJIT" PARENT_SCOPE)
+            ENDIF()
+            SET(LUAJIT_FOUND OFF PARENT_SCOPE)
+            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+                MARK_AS_ADVANCED(
+                    LUAJIT_FOUND
+                    LUA_VERSION_MAJOR
+                    LUA_VERSION_MINOR
+                    LUAJIT_INTERPRETER
+                    LUAJIT_INCLUDE_DIR
+                    LUAJIT_LIBRARIES
+                    ${ERROR_MSG_VAR}
+                )
+            ELSE()
+                MARK_AS_ADVANCED(
+                    LUAJIT_FOUND
+                    LUA_VERSION_MAJOR
+                    LUA_VERSION_MINOR
+                    LUAJIT_INTERPRETER
+                    LUAJIT_INCLUDE_DIR
+                    LUAJIT_LIBRARIES
+                )
+            ENDIF()
+            RETURN()
         ENDIF()
-    ENDIF()
-
-    IF (LUA_UUID_ENABLE_TESTS)
-        FIND_PROGRAM(_LUA_PROG
-            NAMES "luajit" "lua"
-            HINTS ENV LUA_DIR
+    ELSE()
+        FIND_LIBRARY(_LUAJIT_LIBRARIES
+            NAMES "luajit-5.1" "luajit"
+            HINTS ENV LUAJIT_DIR
+                  ENV LUA_DIR
             OPTIONAL
         )
 
-        IF (NOT _LUA_PROG)
-            MESSAGE(FATAL_ERROR "Failed to find LuaJIT")
+        IF (NOT _LUAJIT_LIBRARIES)
+            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+                SET(${ERROR_MSG_VAR} "Failed to find LuaJIT library" PARENT_SCOPE)
+            ENDIF()
+            SET(LUAJIT_FOUND OFF PARENT_SCOPE)
+            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+                MARK_AS_ADVANCED(
+                    LUAJIT_FOUND
+                    LUA_VERSION_MAJOR
+                    LUA_VERSION_MINOR
+                    LUAJIT_INTERPRETER
+                    LUAJIT_INCLUDE_DIR
+                    LUAJIT_LIBRARIES
+                    ${ERROR_MSG_VAR}
+                )
+            ELSE()
+                MARK_AS_ADVANCED(
+                    LUAJIT_FOUND
+                    LUA_VERSION_MAJOR
+                    LUA_VERSION_MINOR
+                    LUAJIT_INTERPRETER
+                    LUAJIT_INCLUDE_DIR
+                    LUAJIT_LIBRARIES
+                )
+            ENDIF()
+            RETURN()
         ENDIF()
+    ENDIF()
 
-        EXECUTE_PROCESS(
-            COMMAND ${_LUA_PROG} "-v"
-            OUTPUT_VARIABLE _LUAJIT_VERSION_CONTENT
-            OUTPUT_STRIP_TRAILING_WHITESPACE
+    FIND_PROGRAM(_LUAJIT_INTERPRETER
+        NAMES "luajit" "lua" "lua5.1" "lua51" "lua-5.1" "lua-51"
+        HINTS ENV LUAJIT_DIR
+              ENV LUA_DIR
+        OPTIONAL
+    )
+
+    IF (NOT _LUAJIT_INTERPRETER)
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            SET(${ERROR_MSG_VAR} "Failed to find LuaJIT" PARENT_SCOPE)
+        ENDIF()
+        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+                ${ERROR_MSG_VAR}
+            )
+        ELSE()
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+            )
+        ENDIF()
+        RETURN()
+    ENDIF()
+
+    EXECUTE_PROCESS(
+        COMMAND ${_LUAJIT_INTERPRETER} "-v"
+        OUTPUT_VARIABLE _LUAJIT_VERSION_CONTENT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    IF (NOT _LUAJIT_VERSION_CONTENT MATCHES "^LuaJIT .* Mike Pall")
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            SET(${ERROR_MSG_VAR} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
+        ENDIF()
+        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+                ${ERROR_MSG_VAR}
+            )
+        ELSE()
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+            )
+        ENDIF()
+        RETURN()
+    ENDIF()
+
+    EXECUTE_PROCESS(
+        COMMAND ${_LUAJIT_INTERPRETER} "-e" "print(_VERSION:sub(5))"
+        OUTPUT_VARIABLE _LUAJIT_ABI_CONTENT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    IF (NOT _LUAJIT_ABI_CONTENT STREQUAL "5.1")
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            SET(${ERROR_MSG_VAR} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
+        ENDIF()
+        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
+        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+                ${ERROR_MSG_VAR}
+            )
+        ELSE()
+            MARK_AS_ADVANCED(
+                LUAJIT_FOUND
+                LUA_VERSION_MAJOR
+                LUA_VERSION_MINOR
+                LUAJIT_INTERPRETER
+                LUAJIT_INCLUDE_DIR
+                LUAJIT_LIBRARIES
+            )
+        ENDIF()
+        RETURN()
+    ENDIF()
+
+    SET(LUAJIT_FOUND ON PARENT_SCOPE)
+    SET(LUA_VERSION_MAJOR "5" PARENT_SCOPE)
+    SET(LUA_VERSION_MINOR "1" PARENT_SCOPE)
+    SET(LUAJIT_INTERPRETER "${_LUAJIT_INTERPRETER}" PARENT_SCOPE)
+    SET(LUAJIT_INCLUDE_DIR "${_LUAJIT_INCLUDE_DIR}" PARENT_SCOPE)
+    SET(LUAJIT_LIBRARIES "${_LUAJIT_LIBRARIES}" PARENT_SCOPE)
+    IF (${ERROR_MSG_VAR})
+        UNSET(${ERROR_MSG_VAR} PARENT_SCOPE)
+    ENDIF()
+
+    IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+        MARK_AS_ADVANCED(
+            LUAJIT_FOUND
+            LUA_VERSION_MAJOR
+            LUA_VERSION_MINOR
+            LUAJIT_INTERPRETER
+            LUAJIT_INCLUDE_DIR
+            LUAJIT_LIBRARIES
+            ${ERROR_MSG_VAR}
         )
-
-        IF (NOT _LUAJIT_VERSION_CONTENT MATCHES "^LuaJIT .* Mike Pall")
-            MESSAGE(FATAL_ERROR "Failed to find a working LuaJIT interpreter")
-        ENDIF()
-
-        EXECUTE_PROCESS(
-            COMMAND ${_LUA_PROG} "-e" "print(_VERSION:sub(5))"
-            OUTPUT_VARIABLE _LUAJIT_ABI_CONTENT
-            OUTPUT_STRIP_TRAILING_WHITESPACE
+    ELSE()
+        MARK_AS_ADVANCED(
+            LUAJIT_FOUND
+            LUA_VERSION_MAJOR
+            LUA_VERSION_MINOR
+            LUAJIT_INTERPRETER
+            LUAJIT_INCLUDE_DIR
+            LUAJIT_LIBRARIES
         )
+    ENDIF()
+ENDFUNCTION()
 
-        IF (NOT _LUAJIT_ABI_CONTENT STREQUAL "5.1")
-            MESSAGE(FATAL_ERROR "Failed to find a working LuaJIT interpreter")
-        ENDIF()
+# Macro used in multiple locations
+# to setup lua-uuid for LuaJIT
+MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
+    _FIND_LUAJIT(ERROR_MSG)
+
+    IF (NOT LUAJIT_FOUND)
+        MESSAGE(FATAL_ERROR ${ERROR_MSG})
+    ENDIF()
+
+    SET(LUA_INCLUDE_DIR "${LUAJIT_INCLUDE_DIR}")
+    SET(LUA_LIBRARIES "${LUAJIT_LIBRARIES}")
+    SET(_LUA_INTERPRETER "${LUAJIT_INTERPRETER}")
+
+    TARGET_INCLUDE_DIRECTORIES(lua-uuid PRIVATE ${LUA_INCLUDE_DIR})
+    IF (WIN32)
+        TARGET_LINK_LIBRARIES(lua-uuid PRIVATE ${LUA_LIBRARIES})
     ENDIF()
 ENDMACRO()
 
@@ -279,7 +479,7 @@ ELSE()
         ENDIF()
 
         IF (LUA_UUID_ENABLE_TESTS)
-            FIND_PROGRAM(_LUA_PROG
+            FIND_PROGRAM(_LUA_INTERPRETER
                 NAMES
                     "lua${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
                     "lua${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
@@ -290,12 +490,12 @@ ELSE()
                 OPTIONAL
             )
 
-            IF (NOT _LUA_PROG)
+            IF (NOT _LUA_INTERPRETER)
                 MESSAGE(FATAL_ERROR "Failed to find Lua ${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
             ENDIF()
 
             EXECUTE_PROCESS(
-                COMMAND ${_LUA_PROG} "-v"
+                COMMAND ${_LUA_INTERPRETER} "-v"
                 OUTPUT_VARIABLE LUA_VERSION_CONTENT
                 OUTPUT_STRIP_TRAILING_WHITESPACE
             )
@@ -306,7 +506,7 @@ ELSE()
             ENDIF()
 
             EXECUTE_PROCESS(
-                COMMAND ${_LUA_PROG} "-e" "print(_VERSION:sub(5))"
+                COMMAND ${_LUA_INTERPRETER} "-e" "print(_VERSION:sub(5))"
                 OUTPUT_VARIABLE LUA_ABI_CONTENT
                 OUTPUT_STRIP_TRAILING_WHITESPACE
             )
@@ -320,10 +520,6 @@ ELSE()
     ENDIF()
 ENDIF()
 
-IF (_LUAJIT_ABI_CONTENT STREQUAL "5.1")
-    SET(LUA_VERSION_MAJOR "5")
-    SET(LUA_VERSION_MINOR "1")
-ENDIF()
 SET(_LUA_ABI "${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
 
 SET(_INSTALL_KIND)
@@ -369,7 +565,7 @@ IF (LUA_UUID_ENABLE_TESTS)
     FOREACH (_TEST_FILE ${_LUA_UUID_TEST_FILES})
         GET_FILENAME_COMPONENT(_BASENAME ${_TEST_FILE} NAME)
         ADD_TEST(NAME ${_BASENAME}
-            COMMAND ${_LUA_PROG} ${_TEST_FILE}
+            COMMAND ${_LUA_INTERPRETER} ${_TEST_FILE}
         )
         IF (WIN32)
             SET_TESTS_PROPERTIES(${_BASENAME}
@@ -387,14 +583,18 @@ ENDIF()
 
 MESSAGE(STATUS " ")
 MESSAGE(STATUS " Configuration summary:")
+IF (LUAJIT_FOUND)
+MESSAGE(STATUS "   LuaJIT")
+ELSE()
 MESSAGE(STATUS "   Lua")
+ENDIF()
 MESSAGE(STATUS "     Version: ........... ${_LUA_ABI}")
 MESSAGE(STATUS "     Include dir: ....... ${LUA_INCLUDE_DIR}")
 IF (WIN32)
 MESSAGE(STATUS "     Libraries: ......... ${LUA_LIBRARIES}")
 ENDIF()
 IF (LUA_UUID_ENABLE_TESTS)
-MESSAGE(STATUS "     Interpreter: ....... ${_LUA_PROG}")
+MESSAGE(STATUS "     Interpreter: ....... ${_LUA_INTERPRETER}")
 ENDIF()
 IF (NOT (WIN32 OR APPLE))
 MESSAGE(STATUS "   libuuid")
