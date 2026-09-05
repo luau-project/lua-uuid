@@ -37,6 +37,8 @@
 
 > [!IMPORTANT]
 > 
+> On Windows or macOS, there is no need to install external dependencies.
+> 
 > On Unix-like distributions, `lua-uuid` depends on `libuuid`:
 > 
 > * On Debian-based (e.g: Ubuntu) distributions:
@@ -57,11 +59,16 @@
 >     pkg install e2fsprogs-libuuid
 >     ```
 
-Assuming that [LuaRocks](https://luarocks.org/) is properly installed and configured on your system, execute the following command:
+Assuming that [LuaRocks](https://luarocks.org/) is properly installed and configured in the system, execute the following command:
 
 ```bash
 luarocks install lua-uuid
 ```
+
+In case `LuaRocks` is not an option, check the guides:
+
+* [Building on Windows](./BUILDING-WINDOWS.md) or
+* [Building on Unix](./BUILDING-UNIX.md).
 
 ## Usage
 
