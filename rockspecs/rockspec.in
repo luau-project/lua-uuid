@@ -4,7 +4,7 @@ local dev_branch = "@PACKAGE_DEV_BRANCH@"
 
 local is_dev_package = package_version == "dev" or
                        package_version == "scm" or
-                       package_version == "csv" or
+                       package_version == "cvs" or
                        package_version == "git" or
                        package_version == "svn" or
                        package_version == "hg"
