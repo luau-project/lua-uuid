@@ -61,6 +61,7 @@ jobs:
             -f "${makefile}" \
             "PREFIX=$(luarocks config variables.LUA_DIR)" \
             "LUA_VERSION=$(luarocks config lua_version)" \
+            "LUA_INCDIR=$(luarocks config variables.LUA_INCDIR)" \
             "CFLAGS_EXTRA=-fprofile-arcs -ftest-coverage" \
             "LDFLAGS_EXTRA=--coverage" \
             all test
@@ -71,6 +72,7 @@ jobs:
         run: |
           @SETLOCAL ENABLEDELAYEDEXPANSION
           @FOR /F "TOKENS=* USEBACKQ" %%D IN (`luarocks config variables.LUA_DIR`) ^
+          DO @FOR /F "TOKENS=* USEBACKQ" %%I IN (`luarocks config variables.LUA_INCDIR`) ^
           DO @FOR /F "TOKENS=* USEBACKQ" %%V IN (`luarocks config lua_version`) ^
           DO @FOR /F "TOKENS=* USEBACKQ" %%L IN (`dir /B %%D\lib\liblua*.dll.a`) ^
           DO (
@@ -81,6 +83,7 @@ jobs:
               -f "Makefile.win" ^
               "PREFIX=%%D" ^
               "LUA_VERSION=%%V" ^
+              "LUA_INCDIR=%%I" ^
               "LUA_LIBNAME=!_LUA_LIBNAME!" ^
               "CFLAGS_EXTRA=-fprofile-arcs -ftest-coverage" ^
               "LDFLAGS_EXTRA=--coverage" ^
