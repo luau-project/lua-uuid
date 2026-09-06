@@ -91,7 +91,7 @@ local function build_plat(plat)
             build_variables = {
                 CFLAGS = "$(CFLAGS)",
                 LIBFLAG = "$(LIBFLAG)",
-                CFLAGS_EXTRA = "-DLUA_UUID_BUILD_SHARED -DLUA_UUID_USE_APPLE",
+                CCDEFINES = "-DLUA_UUID_BUILD_SHARED -DLUA_UUID_USE_APPLE",
                 LIBFLAG_EXTRA = "-framework CoreFoundation",
                 LUA_INCDIR = "$(LUA_INCDIR)",
                 OBJ_EXTENSION = "$(OBJ_EXTENSION)",
