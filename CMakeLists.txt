@@ -176,7 +176,23 @@ ELSE()
 ENDIF()
 
 # Helper function to find LuaJIT
-FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
+FUNCTION(_FIND_LUAJIT)
+    IF (NOT DEFINED CMAKE_PARSE_ARGUMENTS)
+        INCLUDE(CMakeParseArguments)
+    ENDIF()
+    CMAKE_PARSE_ARGUMENTS(
+        PARSE_ARGV 0
+        _FLJ
+        ""
+        "ERROR_VARIABLE"
+        ""
+    )
+    IF (_FLJ_UNPARSED_ARGUMENTS)
+        MESSAGE(FATAL_ERROR "_FIND_LUAJIT(): ${_FLJ_UNPARSED_ARGUMENTS}: unexpected arguments")
+    ENDIF()
+    IF (_FLJ_ERROR_VARIABLE AND NOT ("${_FLJ_ERROR_VARIABLE}" MATCHES "^[a-zA-Z_]?[a-zA-Z0-9_]+$"))
+        MESSAGE(FATAL_ERROR "ERROR_VARIABLE is expected to be a valid variable name")
+    ENDIF()
     FOREACH(LUAJIT_SUFFIX "-2.1" "" "-2.0")
         FIND_PATH(_LUAJIT_INCLUDE_DIR
             NAMES "luajit.h"
@@ -199,11 +215,11 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
     ENDFOREACH()
 
     IF (NOT _LUAJIT_INCLUDE_DIR)
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
-            SET(${ERROR_MSG_VAR} "Failed to find LuaJIT headers" PARENT_SCOPE)
+        IF (_FLJ_ERROR_VARIABLE)
+            SET(${_FLJ_ERROR_VARIABLE} "Failed to find LuaJIT headers" PARENT_SCOPE)
         ENDIF()
         SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+        IF (_FLJ_ERROR_VARIABLE)
             MARK_AS_ADVANCED(
                 LUAJIT_FOUND
                 LUA_VERSION_MAJOR
@@ -211,7 +227,7 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
                 LUAJIT_INTERPRETER
                 LUAJIT_INCLUDE_DIR
                 LUAJIT_LIBRARIES
-                ${ERROR_MSG_VAR}
+                ${_FLJ_ERROR_VARIABLE}
             )
         ELSE()
             MARK_AS_ADVANCED(
@@ -244,11 +260,11 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
         ENDIF()
 
         IF (NOT _LUAJIT_LIBRARIES)
-            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
-                SET(${ERROR_MSG_VAR} "Failed to find import libraries for LuaJIT" PARENT_SCOPE)
+            IF (_FLJ_ERROR_VARIABLE)
+                SET(${_FLJ_ERROR_VARIABLE} "Failed to find import libraries for LuaJIT" PARENT_SCOPE)
             ENDIF()
             SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            IF (_FLJ_ERROR_VARIABLE)
                 MARK_AS_ADVANCED(
                     LUAJIT_FOUND
                     LUA_VERSION_MAJOR
@@ -256,7 +272,7 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
                     LUAJIT_INTERPRETER
                     LUAJIT_INCLUDE_DIR
                     LUAJIT_LIBRARIES
-                    ${ERROR_MSG_VAR}
+                    ${_FLJ_ERROR_VARIABLE}
                 )
             ELSE()
                 MARK_AS_ADVANCED(
@@ -279,11 +295,11 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
         )
 
         IF (NOT _LUAJIT_LIBRARIES)
-            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
-                SET(${ERROR_MSG_VAR} "Failed to find LuaJIT library" PARENT_SCOPE)
+            IF (_FLJ_ERROR_VARIABLE)
+                SET(${_FLJ_ERROR_VARIABLE} "Failed to find LuaJIT library" PARENT_SCOPE)
             ENDIF()
             SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-            IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+            IF (_FLJ_ERROR_VARIABLE)
                 MARK_AS_ADVANCED(
                     LUAJIT_FOUND
                     LUA_VERSION_MAJOR
@@ -291,7 +307,7 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
                     LUAJIT_INTERPRETER
                     LUAJIT_INCLUDE_DIR
                     LUAJIT_LIBRARIES
-                    ${ERROR_MSG_VAR}
+                    ${_FLJ_ERROR_VARIABLE}
                 )
             ELSE()
                 MARK_AS_ADVANCED(
@@ -315,11 +331,11 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
     )
 
     IF (NOT _LUAJIT_INTERPRETER)
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
-            SET(${ERROR_MSG_VAR} "Failed to find LuaJIT" PARENT_SCOPE)
+        IF (_FLJ_ERROR_VARIABLE)
+            SET(${_FLJ_ERROR_VARIABLE} "Failed to find LuaJIT" PARENT_SCOPE)
         ENDIF()
         SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+        IF (_FLJ_ERROR_VARIABLE)
             MARK_AS_ADVANCED(
                 LUAJIT_FOUND
                 LUA_VERSION_MAJOR
@@ -327,7 +343,7 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
                 LUAJIT_INTERPRETER
                 LUAJIT_INCLUDE_DIR
                 LUAJIT_LIBRARIES
-                ${ERROR_MSG_VAR}
+                ${_FLJ_ERROR_VARIABLE}
             )
         ELSE()
             MARK_AS_ADVANCED(
@@ -349,11 +365,11 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
     )
 
     IF (NOT _LUAJIT_VERSION_CONTENT MATCHES "^LuaJIT .* Mike Pall")
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
-            SET(${ERROR_MSG_VAR} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
+        IF (_FLJ_ERROR_VARIABLE)
+            SET(${_FLJ_ERROR_VARIABLE} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
         ENDIF()
         SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+        IF (_FLJ_ERROR_VARIABLE)
             MARK_AS_ADVANCED(
                 LUAJIT_FOUND
                 LUA_VERSION_MAJOR
@@ -361,7 +377,7 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
                 LUAJIT_INTERPRETER
                 LUAJIT_INCLUDE_DIR
                 LUAJIT_LIBRARIES
-                ${ERROR_MSG_VAR}
+                ${_FLJ_ERROR_VARIABLE}
             )
         ELSE()
             MARK_AS_ADVANCED(
@@ -383,11 +399,11 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
     )
 
     IF (NOT _LUAJIT_ABI_CONTENT STREQUAL "5.1")
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
-            SET(${ERROR_MSG_VAR} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
+        IF (_FLJ_ERROR_VARIABLE)
+            SET(${_FLJ_ERROR_VARIABLE} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
         ENDIF()
         SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+        IF (_FLJ_ERROR_VARIABLE)
             MARK_AS_ADVANCED(
                 LUAJIT_FOUND
                 LUA_VERSION_MAJOR
@@ -395,7 +411,7 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
                 LUAJIT_INTERPRETER
                 LUAJIT_INCLUDE_DIR
                 LUAJIT_LIBRARIES
-                ${ERROR_MSG_VAR}
+                ${_FLJ_ERROR_VARIABLE}
             )
         ELSE()
             MARK_AS_ADVANCED(
@@ -416,11 +432,11 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
     SET(LUAJIT_INTERPRETER "${_LUAJIT_INTERPRETER}" PARENT_SCOPE)
     SET(LUAJIT_INCLUDE_DIR "${_LUAJIT_INCLUDE_DIR}" PARENT_SCOPE)
     SET(LUAJIT_LIBRARIES "${_LUAJIT_LIBRARIES}" PARENT_SCOPE)
-    IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
-        UNSET(${ERROR_MSG_VAR} PARENT_SCOPE)
+    IF (_FLJ_ERROR_VARIABLE)
+        UNSET(${_FLJ_ERROR_VARIABLE} PARENT_SCOPE)
     ENDIF()
 
-    IF (NOT "${ERROR_MSG_VAR}" STREQUAL "")
+    IF (_FLJ_ERROR_VARIABLE)
         MARK_AS_ADVANCED(
             LUAJIT_FOUND
             LUA_VERSION_MAJOR
@@ -428,7 +444,7 @@ FUNCTION(_FIND_LUAJIT ERROR_MSG_VAR)
             LUAJIT_INTERPRETER
             LUAJIT_INCLUDE_DIR
             LUAJIT_LIBRARIES
-            ${ERROR_MSG_VAR}
+            ${_FLJ_ERROR_VARIABLE}
         )
     ELSE()
         MARK_AS_ADVANCED(
@@ -445,7 +461,7 @@ ENDFUNCTION()
 # Macro used in multiple locations
 # to setup lua-uuid for LuaJIT
 MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
-    _FIND_LUAJIT(ERROR_MSG)
+    _FIND_LUAJIT(ERROR_VARIABLE ERROR_MSG)
 
     IF (NOT LUAJIT_FOUND)
         MESSAGE(FATAL_ERROR ${ERROR_MSG})
