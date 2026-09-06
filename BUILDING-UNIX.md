@@ -19,7 +19,10 @@ This page details how to build and install `lua-uuid` directly from the source c
 
 > [!NOTE]
 > 
-> **Install CMake**: In order to use this method, the `cmake` tool is required. On macOS, visit the website [https://cmake.org/](https://cmake.org/), download and install it. On Unix distributions, use the package manager of the system to install it.
+> **Install CMake**: In order to use this method, the `cmake` tool is required.
+>
+> * On macOS, visit the website [https://cmake.org/](https://cmake.org/), download and install it;
+> * On Unix distributions, use the package manager of the system to install it.
 
 ## Build and Install
 
@@ -47,7 +50,7 @@ This page details how to build and install `lua-uuid` directly from the source c
     ctest --test-dir build -C Release
     ```
 
-5. Install `lua-uuid` (_you may need to use **sudo**_):
+5. Install `lua-uuid` (_super user privileges or **sudo** may be required for this step to work_):
 
     ```bash
     cmake --install build --config Release
