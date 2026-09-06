@@ -60,6 +60,7 @@ jobs:
           make \
             -f "${makefile}" \
             "PREFIX=$(luarocks config variables.LUA_DIR)" \
+            "CCOPT=-O0" \
             "LUA_VERSION=$(luarocks config lua_version)" \
             "LUA_INCDIR=$(luarocks config variables.LUA_INCDIR)" \
             "CFLAGS_EXTRA=-fprofile-arcs -ftest-coverage" \
@@ -82,6 +83,7 @@ jobs:
             @mingw32-make ^
               -f "Makefile.win" ^
               "PREFIX=%%D" ^
+              "CCOPT=-O0" ^
               "LUA_VERSION=%%V" ^
               "LUA_INCDIR=%%I" ^
               "LUA_LIBNAME=!_LUA_LIBNAME!" ^
