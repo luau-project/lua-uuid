@@ -256,6 +256,19 @@ jobs:
           - clang
           - clang++
 
+        exclude:
+          - lua-version: luajit
+            toolchain: g++
+
+          - lua-version: openresty
+            toolchain: g++
+
+          - lua-version: luajit
+            toolchain: clang++
+
+          - lua-version: openresty
+            toolchain: clang++
+
     env:
       TOOLCHAIN: ${{ matrix.toolchain }}
 
