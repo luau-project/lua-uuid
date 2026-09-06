@@ -1,5 +1,7 @@
 # lua-uuid
 
+[![codecov](https://codecov.io/gh/luau-project/lua-uuid/graph/badge.svg?token=N1N41AVV35)](https://codecov.io/gh/luau-project/lua-uuid)
+
 [![LuaRocks](https://img.shields.io/luarocks/v/luau-project/lua-uuid?label=LuaRocks&color=2c3e67)](https://luarocks.org/modules/luau-project/lua-uuid)
 
 ## Overview
