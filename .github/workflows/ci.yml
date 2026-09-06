@@ -235,3 +235,70 @@ jobs:
 
       - name: Install
         run: cmake --install build --config Release
+
+  test-multiple-compilers:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+
+        lua-version:
+          - 5.1
+          - 5.2
+          - 5.3
+          - 5.4
+          - 5.5
+          - luajit
+          - openresty
+
+        toolchain:
+          - g++
+          - clang
+          - clang++
+
+    env:
+      TOOLCHAIN: ${{ matrix.toolchain }}
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install dependencies
+        run: sudo apt install -y uuid-dev
+
+      - name: Install Clang
+        if: contains(matrix.toolchain, 'clang')
+        run: sudo apt install -y clang
+
+      - name: Setup Lua and LuaRocks
+        uses: luau-project/setup-lua@ebdc724769a3976b27abe70d93a730aede440ba9 # v2.0.8
+        with:
+          lua-version: ${{ matrix.lua-version }}
+          cc: ${{ matrix.toolchain }}
+          ld: ${{ matrix.toolchain }}
+
+      - name: Set environment variable to hold the rockspec name
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "ROCKSPEC=$(make -f Makefile.unix echo-rockspec)" >> $GITHUB_ENV
+          else
+            echo "ROCKSPEC=$(make -f Makefile.unix echo-dev-rockspec)" >> $GITHUB_ENV
+          fi
+
+      - name: Lint
+        run: luarocks lint "$ROCKSPEC"
+
+      - name: Build
+        run: luarocks make "$ROCKSPEC"
+
+      - name: Test
+        run: |
+          for f in samples/*.lua; do
+            echo "Running sample: ${f}";
+
+            lua "${f}" || {
+              echo "Failed to run the sample: ${f}";
+              exit 1;
+            }
+          done
