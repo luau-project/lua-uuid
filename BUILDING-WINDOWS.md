@@ -74,6 +74,25 @@ This page details how to build `lua-uuid` directly from the source code on Windo
     cmake --install build --config Release
     ```
 
+    ```lua
+    -- run this script
+    -- to find suitable locations
+    -- to install `lua-uuid.dll`
+    local pkg = "lua-uuid"
+    local dirsep = package.config:sub(1, 1)
+    local pattern = (dirsep == "\\") and
+        "([^\\/]+)$" or
+        "([^" .. dirsep .. "]+)$"
+
+    for p in package.cpath:gmatch("[^;]+") do
+        local path = ((p:gsub("%?", pkg)))
+        local basename = path:match(pattern)
+        if (basename and basename:sub(1, #pkg) == pkg) then
+            print(path)
+        end
+    end
+    ```
+
 > [!NOTE]
 > 
-> Find the file `lua-uuid.dll` within `C:\lua-uuid` and copy it to any directory covered by `LUA_CPATH`.
+> Find the file `lua-uuid.dll` within `C:\lua-uuid` and copy it to any directory covered by `LUA_CPATH`. For instance, the previous script tells suitable paths to store `lua-uuid.dll`.
