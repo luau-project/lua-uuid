@@ -15,7 +15,87 @@ on:
 permissions: read-all
 
 jobs:
-  test-minimal:
+  test-coverage:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+
+        lua-version:
+          - 5.1
+          - 5.2
+          - 5.3
+          - 5.4
+          - 5.5
+          - luajit
+          - openresty
+
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt install -y uuid-dev
+
+      - name: Setup Lua and LuaRocks
+        uses: luau-project/setup-lua@ebdc724769a3976b27abe70d93a730aede440ba9 # v2.0.8
+        with:
+          lua-version: ${{ matrix.lua-version }}
+
+      - name: Build and test (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          if test "$RUNNER_OS" = "macOS"; then
+            makefile="Makefile.macosx"
+          else
+            makefile="Makefile.unix"
+          fi
+          make \
+            -f "${makefile}" \
+            "PREFIX=$(luarocks config variables.LUA_DIR)" \
+            "LUA_VERSION=$(luarocks config lua_version)" \
+            "CFLAGS_EXTRA=-fprofile-arcs -ftest-coverage" \
+            "LDFLAGS_EXTRA=--coverage" \
+            all test
+
+      - name: Build and test (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          @SETLOCAL ENABLEDELAYEDEXPANSION
+          @FOR /F "TOKENS=* USEBACKQ" %%D IN (`luarocks config variables.LUA_DIR`) ^
+          DO @FOR /F "TOKENS=* USEBACKQ" %%V IN (`luarocks config lua_version`) ^
+          DO @FOR /F "TOKENS=* USEBACKQ" %%L IN (`dir /B %%D\lib\liblua*.dll.a`) ^
+          DO (
+            @SET "_TMP_LUA_LIBNAME=%%L"
+            @SET "_LUA_LIBNAME=!_TMP_LUA_LIBNAME:~3,-6!"
+
+            @mingw32-make ^
+              -f "Makefile.win" ^
+              "PREFIX=%%D" ^
+              "LUA_VERSION=%%V" ^
+              "LUA_LIBNAME=!_LUA_LIBNAME!" ^
+              "CFLAGS_EXTRA=-fprofile-arcs -ftest-coverage" ^
+              "LDFLAGS_EXTRA=--coverage" ^
+              all test
+          )
+
+      - name: Generate coverate report
+        run: gcov --relative-only "src/lua-uuid.c"
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-luarocks:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
