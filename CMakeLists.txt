@@ -196,9 +196,12 @@ FUNCTION(_FIND_LUAJIT)
     FOREACH(LUAJIT_SUFFIX "-2.1" "" "-2.0")
         FIND_PATH(_LUAJIT_INCLUDE_DIR
             NAMES "luajit.h"
-            HINTS ENV LUAJIT_DIR
-                  ENV LUA_DIR
-            PATH_SUFFIXES "luajit${LUAJIT_SUFFIX}"
+            HINTS
+                ENV LUAJIT_DIR
+                ENV LUA_DIR
+            PATH_SUFFIXES
+                "include/luajit${LUAJIT_SUFFIX}"
+                "luajit${LUAJIT_SUFFIX}"
         )
 
         IF (_LUAJIT_INCLUDE_DIR AND
@@ -246,15 +249,19 @@ FUNCTION(_FIND_LUAJIT)
         IF (MINGW)
             FIND_FILE(_LUAJIT_LIBRARIES
                 NAMES "lua51.dll"
-                HINTS ENV LUAJIT_DIR
-                      ENV LUA_DIR
+                HINTS
+                    ENV LUAJIT_DIR
+                    ENV LUA_DIR
+                PATH_SUFFIXES "bin"
                 OPTIONAL
             )
         ELSE()
             FIND_LIBRARY(_LUAJIT_LIBRARIES
                 NAMES "lua51"
-                HINTS ENV LUAJIT_DIR
-                      ENV LUA_DIR
+                HINTS
+                    ENV LUAJIT_DIR
+                    ENV LUA_DIR
+                PATH_SUFFIXES "lib"
                 OPTIONAL
             )
         ENDIF()
@@ -289,8 +296,10 @@ FUNCTION(_FIND_LUAJIT)
     ELSE()
         FIND_LIBRARY(_LUAJIT_LIBRARIES
             NAMES "luajit-5.1" "luajit"
-            HINTS ENV LUAJIT_DIR
-                  ENV LUA_DIR
+            HINTS
+                ENV LUAJIT_DIR
+                ENV LUA_DIR
+            PATH_SUFFIXES "lib"
             OPTIONAL
         )
 
@@ -325,8 +334,10 @@ FUNCTION(_FIND_LUAJIT)
 
     FIND_PROGRAM(_LUAJIT_INTERPRETER
         NAMES "luajit" "lua" "lua5.1" "lua51" "lua-5.1" "lua-51"
-        HINTS ENV LUAJIT_DIR
-              ENV LUA_DIR
+        HINTS
+            ENV LUAJIT_DIR
+            ENV LUA_DIR
+        PATH_SUFFIXES "bin"
         OPTIONAL
     )
 
