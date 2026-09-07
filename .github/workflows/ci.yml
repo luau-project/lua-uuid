@@ -92,7 +92,7 @@ jobs:
               all test
           )
 
-      - name: Generate coverate report
+      - name: Generate coverage report
         run: gcov --relative-only "src/lua-uuid.c"
 
       - name: Upload coverage reports to Codecov
@@ -155,7 +155,7 @@ jobs:
       - name: Set environment variable to hold the rockspec name (Unix)
         if: runner.os != 'Windows'
         run: |
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+          if test "$GITHUB_REF_TYPE" = "tag"; then
             echo "ROCKSPEC=$(make -f Makefile.unix echo-rockspec)" >> $GITHUB_ENV
           else
             echo "ROCKSPEC=$(make -f Makefile.unix echo-dev-rockspec)" >> $GITHUB_ENV
@@ -378,7 +378,7 @@ jobs:
 
       - name: Set environment variable to hold the rockspec name
         run: |
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+          if test $GITHUB_REF_TYPE" = "tag"; then
             echo "ROCKSPEC=$(make -f Makefile.unix echo-rockspec)" >> $GITHUB_ENV
           else
             echo "ROCKSPEC=$(make -f Makefile.unix echo-dev-rockspec)" >> $GITHUB_ENV
