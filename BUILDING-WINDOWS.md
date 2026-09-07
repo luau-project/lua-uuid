@@ -13,9 +13,7 @@ This page details how to build `lua-uuid` directly from the source code on Windo
 
 * The same compiler used to build Lua or LuaJIT must be available on `PATH` environment variable.
 
-* CMake
-
-    Since `v0.1.0`, it is possible to employ `cmake` to build `lua-uuid` directly from the source code, out of `LuaRocks`. From now on, we are going to assume that `cmake` is installed in the system.
+* CMake: since `v0.1.0`, it is possible to employ `cmake` to build `lua-uuid` directly from the source code, out of `LuaRocks`. From now on, we are going to assume that `cmake` is installed in the system.
 
 > [!NOTE]
 > 
@@ -31,10 +29,10 @@ This page details how to build `lua-uuid` directly from the source code on Windo
     cd lua-uuid
     ```
 
-3. Set an environment variable (`CMAKE_PREFIX_PATH`) to hold the directory of Lua (*assumed to be at `C:\Program Files\Lua`*):
+3. Set an environment variable (`LUA_DIR`) to hold the directory of Lua (*assumed to be at `C:\Program Files\Lua`*):
 
     ```batch
-    set "CMAKE_PREFIX_PATH=C:\Program Files\Lua"
+    set "LUA_DIR=C:\Program Files\Lua"
     ```
 
 4. Configure `lua-uuid` for the Lua version installed:

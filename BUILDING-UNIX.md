@@ -13,9 +13,7 @@ This page details how to build and install `lua-uuid` directly from the source c
 
 * On macOS, there is no need to install any external libraries. On Linux, BSD and other Unix systems, use the package manager offered by the distribution to install the development package for `libuuid`.
 
-* CMake
-
-    Since `v0.1.0`, it is possible to employ `cmake` to build `lua-uuid` directly from the source code, out of `LuaRocks`. From now on, we are going to assume that `cmake` is installed in the system.
+* CMake: since `v0.1.0`, it is possible to employ `cmake` to build `lua-uuid` directly from the source code, out of `LuaRocks`. From now on, we are going to assume that `cmake` is installed in the system.
 
 > [!NOTE]
 > 
