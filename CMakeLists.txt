@@ -26,9 +26,9 @@
 #                                                                                 #
 #=================================================================================#
 
-##################################
+#================================#
 # Main arguments:                #
-##################################
+#================================#
 #                                #
 # LUA_VERSION (STRING)           #
 #   Description:                 #
@@ -63,7 +63,7 @@
 #     * bin                      #
 #   Default value: (UNDEFINED)   #
 #                                #
-##################################
+#================================#
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 
@@ -175,304 +175,13 @@ ELSE()
     ENDIF()
 ENDIF()
 
-# Helper function to find LuaJIT
-FUNCTION(_FIND_LUAJIT)
-    IF (NOT DEFINED CMAKE_PARSE_ARGUMENTS)
-        INCLUDE(CMakeParseArguments)
-    ENDIF()
-    CMAKE_PARSE_ARGUMENTS(
-        PARSE_ARGV 0
-        _FLJ
-        ""
-        "ERROR_VARIABLE"
-        ""
-    )
-    IF (_FLJ_UNPARSED_ARGUMENTS)
-        MESSAGE(FATAL_ERROR "_FIND_LUAJIT(): ${_FLJ_UNPARSED_ARGUMENTS}: unexpected arguments")
-    ENDIF()
-    IF (_FLJ_ERROR_VARIABLE AND NOT ("${_FLJ_ERROR_VARIABLE}" MATCHES "^[a-zA-Z_]?[a-zA-Z0-9_]+$"))
-        MESSAGE(FATAL_ERROR "ERROR_VARIABLE is expected to be a valid variable name")
-    ENDIF()
-    FOREACH(LUAJIT_SUFFIX "-2.1" "" "-2.0")
-        FIND_PATH(_LUAJIT_INCLUDE_DIR
-            NAMES "luajit.h"
-            HINTS
-                ENV LUAJIT_DIR
-                ENV LUA_DIR
-            PATH_SUFFIXES
-                "include/luajit${LUAJIT_SUFFIX}"
-                "luajit${LUAJIT_SUFFIX}"
-        )
-
-        IF (_LUAJIT_INCLUDE_DIR AND
-            EXISTS "${_LUAJIT_INCLUDE_DIR}/lua.h" AND
-            EXISTS "${_LUAJIT_INCLUDE_DIR}/luaconf.h" AND
-            EXISTS "${_LUAJIT_INCLUDE_DIR}/lualib.h" AND
-            EXISTS "${_LUAJIT_INCLUDE_DIR}/lauxlib.h" AND
-            EXISTS "${_LUAJIT_INCLUDE_DIR}/lua.hpp" AND
-            EXISTS "${_LUAJIT_INCLUDE_DIR}/luajit.h")
-            BREAK()
-        ELSE()
-            UNSET(_LUAJIT_INCLUDE_DIR)
-        ENDIF()
-    ENDFOREACH()
-
-    IF (NOT _LUAJIT_INCLUDE_DIR)
-        IF (_FLJ_ERROR_VARIABLE)
-            SET(${_FLJ_ERROR_VARIABLE} "Failed to find LuaJIT headers" PARENT_SCOPE)
-        ENDIF()
-        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (_FLJ_ERROR_VARIABLE)
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-                ${_FLJ_ERROR_VARIABLE}
-            )
-        ELSE()
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-            )
-        ENDIF()
-        RETURN()
-    ENDIF()
-
-    IF (WIN32)
-        IF (MINGW)
-            FIND_FILE(_LUAJIT_LIBRARIES
-                NAMES "lua51.dll"
-                HINTS
-                    ENV LUAJIT_DIR
-                    ENV LUA_DIR
-                PATH_SUFFIXES "bin"
-                OPTIONAL
-            )
-        ELSE()
-            FIND_LIBRARY(_LUAJIT_LIBRARIES
-                NAMES "lua51"
-                HINTS
-                    ENV LUAJIT_DIR
-                    ENV LUA_DIR
-                PATH_SUFFIXES "lib"
-                OPTIONAL
-            )
-        ENDIF()
-
-        IF (NOT _LUAJIT_LIBRARIES)
-            IF (_FLJ_ERROR_VARIABLE)
-                SET(${_FLJ_ERROR_VARIABLE} "Failed to find import libraries for LuaJIT" PARENT_SCOPE)
-            ENDIF()
-            SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-            IF (_FLJ_ERROR_VARIABLE)
-                MARK_AS_ADVANCED(
-                    LUAJIT_FOUND
-                    LUA_VERSION_MAJOR
-                    LUA_VERSION_MINOR
-                    LUAJIT_INTERPRETER
-                    LUAJIT_INCLUDE_DIR
-                    LUAJIT_LIBRARIES
-                    ${_FLJ_ERROR_VARIABLE}
-                )
-            ELSE()
-                MARK_AS_ADVANCED(
-                    LUAJIT_FOUND
-                    LUA_VERSION_MAJOR
-                    LUA_VERSION_MINOR
-                    LUAJIT_INTERPRETER
-                    LUAJIT_INCLUDE_DIR
-                    LUAJIT_LIBRARIES
-                )
-            ENDIF()
-            RETURN()
-        ENDIF()
-    ELSE()
-        FIND_LIBRARY(_LUAJIT_LIBRARIES
-            NAMES "luajit-5.1" "luajit"
-            HINTS
-                ENV LUAJIT_DIR
-                ENV LUA_DIR
-            PATH_SUFFIXES "lib"
-            OPTIONAL
-        )
-
-        IF (NOT _LUAJIT_LIBRARIES)
-            IF (_FLJ_ERROR_VARIABLE)
-                SET(${_FLJ_ERROR_VARIABLE} "Failed to find LuaJIT library" PARENT_SCOPE)
-            ENDIF()
-            SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-            IF (_FLJ_ERROR_VARIABLE)
-                MARK_AS_ADVANCED(
-                    LUAJIT_FOUND
-                    LUA_VERSION_MAJOR
-                    LUA_VERSION_MINOR
-                    LUAJIT_INTERPRETER
-                    LUAJIT_INCLUDE_DIR
-                    LUAJIT_LIBRARIES
-                    ${_FLJ_ERROR_VARIABLE}
-                )
-            ELSE()
-                MARK_AS_ADVANCED(
-                    LUAJIT_FOUND
-                    LUA_VERSION_MAJOR
-                    LUA_VERSION_MINOR
-                    LUAJIT_INTERPRETER
-                    LUAJIT_INCLUDE_DIR
-                    LUAJIT_LIBRARIES
-                )
-            ENDIF()
-            RETURN()
-        ENDIF()
-    ENDIF()
-
-    FIND_PROGRAM(_LUAJIT_INTERPRETER
-        NAMES "luajit" "lua" "lua5.1" "lua51" "lua-5.1" "lua-51"
-        HINTS
-            ENV LUAJIT_DIR
-            ENV LUA_DIR
-        PATH_SUFFIXES "bin"
-        OPTIONAL
-    )
-
-    IF (NOT _LUAJIT_INTERPRETER)
-        IF (_FLJ_ERROR_VARIABLE)
-            SET(${_FLJ_ERROR_VARIABLE} "Failed to find LuaJIT" PARENT_SCOPE)
-        ENDIF()
-        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (_FLJ_ERROR_VARIABLE)
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-                ${_FLJ_ERROR_VARIABLE}
-            )
-        ELSE()
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-            )
-        ENDIF()
-        RETURN()
-    ENDIF()
-
-    EXECUTE_PROCESS(
-        COMMAND ${_LUAJIT_INTERPRETER} "-v"
-        OUTPUT_VARIABLE _LUAJIT_VERSION_CONTENT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-
-    IF (NOT _LUAJIT_VERSION_CONTENT MATCHES "^LuaJIT .* Mike Pall")
-        IF (_FLJ_ERROR_VARIABLE)
-            SET(${_FLJ_ERROR_VARIABLE} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
-        ENDIF()
-        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (_FLJ_ERROR_VARIABLE)
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-                ${_FLJ_ERROR_VARIABLE}
-            )
-        ELSE()
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-            )
-        ENDIF()
-        RETURN()
-    ENDIF()
-
-    EXECUTE_PROCESS(
-        COMMAND ${_LUAJIT_INTERPRETER} "-e" "print(_VERSION:sub(5))"
-        OUTPUT_VARIABLE _LUAJIT_ABI_CONTENT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-
-    IF (NOT _LUAJIT_ABI_CONTENT STREQUAL "5.1")
-        IF (_FLJ_ERROR_VARIABLE)
-            SET(${_FLJ_ERROR_VARIABLE} "Failed to find a working LuaJIT interpreter" PARENT_SCOPE)
-        ENDIF()
-        SET(LUAJIT_FOUND OFF PARENT_SCOPE)
-        IF (_FLJ_ERROR_VARIABLE)
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-                ${_FLJ_ERROR_VARIABLE}
-            )
-        ELSE()
-            MARK_AS_ADVANCED(
-                LUAJIT_FOUND
-                LUA_VERSION_MAJOR
-                LUA_VERSION_MINOR
-                LUAJIT_INTERPRETER
-                LUAJIT_INCLUDE_DIR
-                LUAJIT_LIBRARIES
-            )
-        ENDIF()
-        RETURN()
-    ENDIF()
-
-    SET(LUAJIT_FOUND ON PARENT_SCOPE)
-    SET(LUA_VERSION_MAJOR "5" PARENT_SCOPE)
-    SET(LUA_VERSION_MINOR "1" PARENT_SCOPE)
-    SET(LUAJIT_INTERPRETER "${_LUAJIT_INTERPRETER}" PARENT_SCOPE)
-    SET(LUAJIT_INCLUDE_DIR "${_LUAJIT_INCLUDE_DIR}" PARENT_SCOPE)
-    SET(LUAJIT_LIBRARIES "${_LUAJIT_LIBRARIES}" PARENT_SCOPE)
-    IF (_FLJ_ERROR_VARIABLE)
-        UNSET(${_FLJ_ERROR_VARIABLE} PARENT_SCOPE)
-    ENDIF()
-
-    IF (_FLJ_ERROR_VARIABLE)
-        MARK_AS_ADVANCED(
-            LUAJIT_FOUND
-            LUA_VERSION_MAJOR
-            LUA_VERSION_MINOR
-            LUAJIT_INTERPRETER
-            LUAJIT_INCLUDE_DIR
-            LUAJIT_LIBRARIES
-            ${_FLJ_ERROR_VARIABLE}
-        )
-    ELSE()
-        MARK_AS_ADVANCED(
-            LUAJIT_FOUND
-            LUA_VERSION_MAJOR
-            LUA_VERSION_MINOR
-            LUAJIT_INTERPRETER
-            LUAJIT_INCLUDE_DIR
-            LUAJIT_LIBRARIES
-        )
-    ENDIF()
-ENDFUNCTION()
-
 # Macro used in multiple locations
 # to setup lua-uuid for LuaJIT
 MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
-    _FIND_LUAJIT(ERROR_VARIABLE ERROR_MSG)
+    IF (NOT DEFINED FIND_LUAJIT)
+        INCLUDE("${PROJECT_SOURCE_DIR}/cmake/FindLuaJIT.cmake")
+    ENDIF()
+    FIND_LUAJIT(ERROR_VARIABLE ERROR_MSG)
 
     IF (NOT LUAJIT_FOUND)
         MESSAGE(FATAL_ERROR ${ERROR_MSG})
@@ -514,6 +223,7 @@ ELSE()
                     "lua-${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
                     "lua"
                 HINTS ENV LUA_DIR
+                PATH_SUFFIXES "bin"
                 OPTIONAL
             )
 
