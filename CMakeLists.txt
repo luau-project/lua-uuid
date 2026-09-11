@@ -189,7 +189,7 @@ MACRO(_SETUP_LUA_UUID_FOR_LUAJIT)
 
     SET(LUA_INCLUDE_DIR "${LUAJIT_INCLUDE_DIR}")
     SET(LUA_LIBRARIES "${LUAJIT_LIBRARIES}")
-    SET(_LUA_INTERPRETER "${LUAJIT_INTERPRETER}")
+    SET(LUA_INTERPRETER "${LUAJIT_INTERPRETER}")
 
     TARGET_INCLUDE_DIRECTORIES(lua-uuid PRIVATE ${LUA_INCLUDE_DIR})
     IF (WIN32)
@@ -215,7 +215,7 @@ ELSE()
         ENDIF()
 
         IF (LUA_UUID_ENABLE_TESTS)
-            FIND_PROGRAM(_LUA_INTERPRETER
+            FIND_PROGRAM(LUA_INTERPRETER
                 NAMES
                     "lua${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}"
                     "lua${LUA_VERSION_MAJOR}${LUA_VERSION_MINOR}"
@@ -227,12 +227,12 @@ ELSE()
                 OPTIONAL
             )
 
-            IF (NOT _LUA_INTERPRETER)
+            IF (NOT LUA_INTERPRETER)
                 MESSAGE(FATAL_ERROR "Failed to find Lua ${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}")
             ENDIF()
 
             EXECUTE_PROCESS(
-                COMMAND ${_LUA_INTERPRETER} "-v"
+                COMMAND ${LUA_INTERPRETER} "-v"
                 OUTPUT_VARIABLE LUA_VERSION_CONTENT
                 OUTPUT_STRIP_TRAILING_WHITESPACE
             )
@@ -243,7 +243,7 @@ ELSE()
             ENDIF()
 
             EXECUTE_PROCESS(
-                COMMAND ${_LUA_INTERPRETER} "-e" "print(_VERSION:sub(5))"
+                COMMAND ${LUA_INTERPRETER} "-e" "print(_VERSION:sub(5))"
                 OUTPUT_VARIABLE LUA_ABI_CONTENT
                 OUTPUT_STRIP_TRAILING_WHITESPACE
             )
@@ -253,7 +253,30 @@ ELSE()
             ENDIF()
         ENDIF()
     ELSE()
-        _SETUP_LUA_UUID_FOR_LUAJIT()
+        INCLUDE("${PROJECT_SOURCE_DIR}/cmake/FindPucLuaUsingPkgConfig.cmake")
+
+        IF (DEFINED LUA_VERSION)
+            FIND_PUC_LUA_USING_PKG_CONFIG("${LUA_VERSION}" ERROR_VARIABLE ERROR_MSG)
+        ELSE()
+            FOREACH(_LUA_V "5.5" "5.4" "5.3" "5.2" "5.1")
+                FIND_PUC_LUA_USING_PKG_CONFIG("${_LUA_V}" ERROR_VARIABLE ERROR_MSG)
+
+                IF (LUA_FOUND)
+                    BREAK()
+                ENDIF()
+            ENDFOREACH()
+        ENDIF()
+
+        IF (LUA_FOUND)
+            MESSAGE(STATUS "Found Lua headers at `${LUA_INCLUDE_DIR}'")
+            TARGET_INCLUDE_DIRECTORIES(lua-uuid PRIVATE ${LUA_INCLUDE_DIR})
+            IF (WIN32)
+                MESSAGE(STATUS "Found the Lua libraries at `${LUA_LIBRARIES}'")
+                TARGET_LINK_LIBRARIES(lua-uuid PRIVATE ${LUA_LIBRARIES})
+            ENDIF()
+        ELSE()
+            _SETUP_LUA_UUID_FOR_LUAJIT()
+        ENDIF()
     ENDIF()
 ENDIF()
 
@@ -302,7 +325,7 @@ IF (LUA_UUID_ENABLE_TESTS)
     FOREACH (_TEST_FILE ${_LUA_UUID_TEST_FILES})
         GET_FILENAME_COMPONENT(_BASENAME ${_TEST_FILE} NAME)
         ADD_TEST(NAME ${_BASENAME}
-            COMMAND ${_LUA_INTERPRETER} ${_TEST_FILE}
+            COMMAND ${LUA_INTERPRETER} ${_TEST_FILE}
         )
         IF (WIN32)
             SET_TESTS_PROPERTIES(${_BASENAME}
@@ -331,7 +354,7 @@ IF (WIN32)
 MESSAGE(STATUS "     Libraries: ......... ${LUA_LIBRARIES}")
 ENDIF()
 IF (LUA_UUID_ENABLE_TESTS)
-MESSAGE(STATUS "     Interpreter: ....... ${_LUA_INTERPRETER}")
+MESSAGE(STATUS "     Interpreter: ....... ${LUA_INTERPRETER}")
 ENDIF()
 IF (NOT (WIN32 OR APPLE))
 MESSAGE(STATUS "   libuuid")
