@@ -1,3 +1,14 @@
+## lua-uuid v0.1.0
+
+* Fixed a bug on macOS that accepted invalid GUID / UUID on `parse` function;
+* Moved release automation to live on its own workflow (`publish.yml`);
+* Added a `version` field to the library;
+* Added a `tryparse` method to the library;
+* Added [CMake](https://cmake.org/) as build system;
+* Added the process to report code coverage to [CodeCov](https://codecov.io/gh/luau-project/lua-uuid) using `GCC` and `gcov`;
+* Added docs providing guidance to publish a new release;
+* Added docs to build `lua-uuid` through `CMake`.
+
 ## lua-uuid v0.0.8
 
 * Moving back to the old mode listing platforms on ```build``` and ```external_dependencies``` tables for platform overrides. At the moment, platform overrides merge tables rather than selecting the appropriate value.
