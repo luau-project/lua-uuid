@@ -9,7 +9,7 @@ This page details how to build `lua-uuid` directly from the source code on Windo
 
 ## Prerequisites
 
-* Lua (&gt; 5.1) or LuaJIT must be installed in the system;
+* Lua (&ge; 5.1) or LuaJIT must be installed in the system;
 
 * The same compiler used to build Lua or LuaJIT must be available on `PATH` environment variable.
 
